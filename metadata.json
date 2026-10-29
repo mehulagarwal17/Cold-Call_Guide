@@ -1,0 +1,6 @@
+{
+  "name": "Cold-Call Guide Screen",
+  "description": "Live 8-stage cold-call guidance web assistant and call logging with AI summaries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
