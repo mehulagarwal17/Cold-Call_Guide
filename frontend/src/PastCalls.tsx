@@ -339,7 +339,8 @@ export const PastCalls: React.FC<PastCallsProps> = ({
                     <div
                       style={{
                         fontSize: '12px',
-                        color: '#64748b',
+                        color: c.summary ? '#1e293b' : c.summary_status === 'failed' ? '#dc2626' : '#64748b',
+                        fontStyle: c.summary_status === 'failed' ? 'italic' : 'normal',
                         marginTop: '3px',
                         lineHeight: 1.3,
                         minHeight: '16px',
@@ -348,9 +349,15 @@ export const PastCalls: React.FC<PastCallsProps> = ({
                         textOverflow: 'ellipsis',
                         maxWidth: '220px',
                       }}
-                      title={c.summary || ''}
+                      title={c.summary || (c.summary_status === 'failed' ? 'Summary unavailable' : '')}
                     >
-                      {c.summary || ''}
+                      {c.summary
+                        ? c.summary
+                        : c.summary_status === 'failed'
+                        ? 'Summary unavailable'
+                        : c.summary_status === 'pending'
+                        ? 'Generating summary...'
+                        : ''}
                     </div>
                   </div>
 

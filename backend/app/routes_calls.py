@@ -10,6 +10,7 @@ from app.db import (
     get_call_with_results,
     is_valid_tap,
     STAGE_8_OUTCOMES,
+    STAGE_NAME_MAP,
 )
 
 router = APIRouter(prefix="/calls", tags=["calls"])
@@ -118,13 +119,48 @@ def close_call_endpoint(
                 detail="Outcome can only be specified when furthest_stage is 8",
             )
 
-    updated_call = close_call(
+    # 1. Save call as closed first (guaranteed closed state)
+    call_with_results = get_call_with_results(call_id)
+    stage_results = call_with_results.get("stage_results", []) if call_with_results else []
+
+    closed_call = close_call(
         call_id=call_id,
         outcome=outcome,
         summary=None,
-        summary_status="skipped",
+        summary_status="pending",
     )
-    return updated_call
+
+    # 2. Run LLM one-line summary (10s timeout, max 80 chars)
+    try:
+        from app.llm import generate_summary
+        summary_text = generate_summary(
+            call=closed_call,
+            stage_results=stage_results,
+            stage_name_map=STAGE_NAME_MAP,
+        )
+        if summary_text:
+            final_call = close_call(
+                call_id=call_id,
+                outcome=outcome,
+                summary=summary_text,
+                summary_status="done",
+            )
+        else:
+            final_call = close_call(
+                call_id=call_id,
+                outcome=outcome,
+                summary=None,
+                summary_status="failed",
+            )
+    except Exception:
+        final_call = close_call(
+            call_id=call_id,
+            outcome=outcome,
+            summary=None,
+            summary_status="failed",
+        )
+
+    return final_call
 
 
 @router.get("")
