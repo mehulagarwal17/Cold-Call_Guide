@@ -17,6 +17,28 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/health': {
+          target: 'https://cold-call-guide-s90e.onrender.com',
+          changeOrigin: true,
+          secure: true,
+        },
+        '/stages': {
+          target: 'https://cold-call-guide-s90e.onrender.com',
+          changeOrigin: true,
+          secure: true,
+        },
+        '/calls': {
+          target: 'https://cold-call-guide-s90e.onrender.com',
+          changeOrigin: true,
+          secure: true,
+          bypass: (req) => {
+            if (req.headers.accept && req.headers.accept.includes('text/html')) {
+              return '/index.html';
+            }
+          },
+        },
+      },
     },
   };
 });
