@@ -35,6 +35,118 @@ export const LiveCall: React.FC<LiveCallProps> = ({
   const [closedCallSummary, setClosedCallSummary] = useState<Call | null>(null);
   const [cardError, setCardError] = useState<{ message: string; retry: () => void } | null>(null);
 
+  // Live Speech Recognition (Balto-style AI Copilot) state
+  const [isListening, setIsListening] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [aiLivePrompt, setAiLivePrompt] = useState<string>('Click "Start Live AI Copilot" to listen in real-time...');
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setAiLivePrompt('Speech recognition is not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setAiLivePrompt('🎙 Listening... AI Copilot is active and analyzing conversation in real-time.');
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcriptChunk = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcriptChunk += event.results[i][0].transcript;
+        }
+        setLiveTranscript(transcriptChunk);
+
+        // Real-time keyword & phrase analysis (Balto-style prompts & stage guidance)
+        const lower = transcriptChunk.toLowerCase();
+        if (lower.includes('who') || lower.includes('calling') || lower.includes('where')) {
+          setActiveStageId(2);
+          setAiLivePrompt('💡 Copilot: Prospect asked who is calling. State your company & purpose clearly.');
+        } else if (lower.includes('email') || lower.includes('whatsapp') || lower.includes('send me') || lower.includes('drop me')) {
+          setActiveStageId(3);
+          setAiLivePrompt('💡 Copilot: Permission requested! Agree to send a quick WhatsApp or email summary.');
+        } else if (lower.includes('price') || lower.includes('cost') || lower.includes('expensive') || lower.includes('budget') || lower.includes('charge')) {
+          setActiveStageId(6);
+          setAiLivePrompt('💡 Copilot: Price objection! Isolate cost vs. value and ask what their current loss is.');
+        } else if (lower.includes('competitor') || lower.includes('already use') || lower.includes('vendor')) {
+          setActiveStageId(6);
+          setAiLivePrompt('💡 Copilot: Competitor mentioned. Acknowledge and ask what they wish was faster.');
+        } else if (lower.includes('problem') || lower.includes('issue') || lower.includes('delay') || lower.includes('time') || lower.includes('hours') || lower.includes('weeks')) {
+          setActiveStageId(5);
+          setAiLivePrompt('💡 Copilot: Pain point detected! Type this exact quote into "Their words" in Stage 5.');
+        } else if (lower.includes('meeting') || lower.includes('demo') || lower.includes('call me on') || lower.includes('schedule')) {
+          setActiveStageId(8);
+          setAiLivePrompt('💡 Copilot: Closing signal detected! Move to Stage 8 to book the meeting.');
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error', event.error);
+        if (event.error === 'not-allowed') {
+          setAiLivePrompt('⚠️ Microphone access denied or blocked in iframe. Please check browser permissions or open in a new tab.');
+        } else {
+          setAiLivePrompt(`⚠️ Speech recognition error: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (e: any) {
+      console.error(e);
+      setAiLivePrompt('Could not start microphone. Check browser permissions.');
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setAiLivePrompt('Live AI Copilot paused.');
+  };
+
+  const handleSimulatePhrase = (phrase: string) => {
+    setLiveTranscript(phrase);
+    const lower = phrase.toLowerCase();
+    if (lower.includes('who') || lower.includes('calling') || lower.includes('where')) {
+      setActiveStageId(2);
+      setAiLivePrompt('💡 Copilot: Prospect asked who is calling. State your company & purpose clearly.');
+    } else if (lower.includes('email') || lower.includes('whatsapp') || lower.includes('send me') || lower.includes('drop me')) {
+      setActiveStageId(3);
+      setAiLivePrompt('💡 Copilot: Permission requested! Agree to send a quick WhatsApp or email summary.');
+    } else if (lower.includes('price') || lower.includes('cost') || lower.includes('expensive') || lower.includes('budget') || lower.includes('charge')) {
+      setActiveStageId(6);
+      setAiLivePrompt('💡 Copilot: Price objection! Isolate cost vs. value and ask what their current loss is.');
+    } else if (lower.includes('competitor') || lower.includes('already use') || lower.includes('vendor')) {
+      setActiveStageId(6);
+      setAiLivePrompt('💡 Copilot: Competitor mentioned. Acknowledge and ask what they wish was faster.');
+    } else if (lower.includes('problem') || lower.includes('issue') || lower.includes('delay') || lower.includes('time') || lower.includes('hours') || lower.includes('weeks')) {
+      setActiveStageId(5);
+      setAiLivePrompt('💡 Copilot: Pain point detected! Type this exact quote into "Their words" in Stage 5.');
+    } else if (lower.includes('meeting') || lower.includes('demo') || lower.includes('call me on') || lower.includes('schedule')) {
+      setActiveStageId(8);
+      setAiLivePrompt('💡 Copilot: Closing signal detected! Move to Stage 8 to book the meeting.');
+    } else {
+      setAiLivePrompt(`💡 Copilot analyzed: "${phrase}". Keep probing their needs.`);
+    }
+  };
+
+
+
   // Start & run timer when call starts
   useEffect(() => {
     if (currentCall && currentCall.status === 'in_progress') {
@@ -393,6 +505,112 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         <div className="prospect-meta">
           {currentCall.prospect_role}, {currentCall.company} •{' '}
           <span className="prospect-tag">first call</span>
+        </div>
+      </div>
+
+      {/* Balto-Style Live AI Speech Copilot Bar */}
+      <div
+        style={{
+          background: isListening ? '#f0fdf4' : '#f8fafc',
+          border: `1px solid ${isListening ? '#86efac' : '#e2e8f0'}`,
+          borderRadius: '8px',
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '14px' }}>{isListening ? '🟢' : '🎙'}</span>
+            <strong style={{ fontSize: '13px', color: '#0f172a' }}>Balto AI Live Copilot</strong>
+            {isListening && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  background: '#dcfce7',
+                  color: '#166534',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  animation: 'pulse 1.5s infinite',
+                }}
+              >
+                LISTENING LIVE
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={isListening ? stopListening : startListening}
+            style={{
+              background: isListening ? '#dc2626' : '#0284c7',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            }}
+          >
+            {isListening ? 'Stop Listening' : '🎙 Start Live AI Copilot'}
+          </button>
+        </div>
+
+        <div
+          style={{
+            fontSize: '12.5px',
+            color: '#334155',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '8px 10px',
+            lineHeight: 1.4,
+          }}
+        >
+          {aiLivePrompt}
+        </div>
+
+        {liveTranscript && (
+          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', maxHeight: '40px', overflowY: 'auto' }}>
+            <strong>Heard:</strong> "{liveTranscript}"
+          </div>
+        )}
+
+        {/* Quick Test / Simulate Prospect Speech buttons for iframe environments */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Simulate Prospect Speech (Instant AI Copilot Test):</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              'Who is calling?',
+              'Send me an email',
+              'Too expensive',
+              'Already use a competitor',
+              'Delivery takes 3 weeks',
+              'Let\'s schedule a demo'
+            ].map((phrase, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSimulatePhrase(phrase)}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  borderRadius: '12px',
+                  padding: '3px 8px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                "{phrase}"
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
