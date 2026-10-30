@@ -153,4 +153,13 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async deleteCall(callId: string): Promise<{ status: string; id: string }> {
+    const base = getApiBaseUrl();
+    const res = await fetch(`${base}/calls/${callId}`, {
+      method: 'DELETE',
+      headers: { Accept: 'application/json' },
+    });
+    return handleResponse(res);
+  },
 };

@@ -18,6 +18,8 @@ export const PastCalls: React.FC<PastCallsProps> = ({
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
   const [selectedCallDetail, setSelectedCallDetail] = useState<Call | null>(null);
   const [loadingDetail, setLoadingDetail] = useState<boolean>(false);
+  const [callPendingDelete, setCallPendingDelete] = useState<Call | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Load all calls newest first
   const loadCalls = async () => {
@@ -34,6 +36,101 @@ export const PastCalls: React.FC<PastCallsProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteCall = async () => {
+    if (!callPendingDelete) return;
+    try {
+      setIsDeleting(true);
+      onError(null);
+      await api.deleteCall(callPendingDelete.id);
+      setCalls((prev) => prev.filter((c) => c.id !== callPendingDelete.id));
+      if (selectedCallId === callPendingDelete.id) {
+        setSelectedCallId(null);
+        setSelectedCallDetail(null);
+      }
+      setCallPendingDelete(null);
+    } catch (err: any) {
+      onError(err.message || 'Failed to delete call.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const renderDeleteModal = () => {
+    if (!callPendingDelete) return null;
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px',
+        }}
+        onClick={() => !isDeleting && setCallPendingDelete(null)}
+      >
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '10px',
+            padding: '20px',
+            maxWidth: '360px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+            Delete call record?
+          </h3>
+          <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.4, marginBottom: '16px' }}>
+            Are you sure you want to delete the record for{' '}
+            <strong>{callPendingDelete.prospect_name}</strong> ({callPendingDelete.company})? This action cannot be undone.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={isDeleting}
+              onClick={() => setCallPendingDelete(null)}
+              style={{ width: 'auto', padding: '6px 14px', fontSize: '13px' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDeleteCall}
+              style={{
+                background: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 14px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {isDeleting && <span className="spinner" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></span>}
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -110,7 +207,7 @@ export const PastCalls: React.FC<PastCallsProps> = ({
 
     return (
       <div className="guide-card">
-        <div className="card-header">
+        <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <button
             type="button"
             className="nav-link-btn"
@@ -119,9 +216,28 @@ export const PastCalls: React.FC<PastCallsProps> = ({
           >
             ← Back to Past Calls
           </button>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            {formatDateTime(selectedCallDetail.started_at)}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+              {formatDateTime(selectedCallDetail.started_at)}
+            </span>
+            <button
+              type="button"
+              title="Delete this call record"
+              onClick={() => setCallPendingDelete(selectedCallDetail)}
+              style={{
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                color: '#dc2626',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
 
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -255,6 +371,7 @@ export const PastCalls: React.FC<PastCallsProps> = ({
             Start a new call
           </button>
         </div>
+        {renderDeleteModal()}
       </div>
     );
   }
@@ -373,21 +490,54 @@ export const PastCalls: React.FC<PastCallsProps> = ({
                     </div>
                   </div>
 
-                  {/* Right: Stage reached in capitals, date/time under it */}
-                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <div
+                  {/* Right: Stage reached in capitals, date/time under it, and delete button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          color: '#0369a1',
+                          letterSpacing: '0.3px',
+                        }}
+                      >
+                        {stageReachedName}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>
+                        {formatDateTime(c.started_at)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      title="Delete call record"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCallPendingDelete(c);
+                      }}
                       style={{
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        color: '#0369a1',
-                        letterSpacing: '0.3px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        padding: '6px',
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        lineHeight: 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#dc2626';
+                        e.currentTarget.style.background = '#fee2e2';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#94a3b8';
+                        e.currentTarget.style.background = 'transparent';
                       }}
                     >
-                      {stageReachedName}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>
-                      {formatDateTime(c.started_at)}
-                    </div>
+                      🗑
+                    </button>
                   </div>
                 </div>
               );
@@ -395,6 +545,8 @@ export const PastCalls: React.FC<PastCallsProps> = ({
           </div>
         )}
       </div>
+
+      {renderDeleteModal()}
     </div>
   );
 };

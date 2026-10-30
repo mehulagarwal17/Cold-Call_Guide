@@ -310,3 +310,28 @@ def test_list_calls_order_and_enrichment():
     ]
     for field in required_fields:
         assert field in first_call
+
+
+def test_delete_call_endpoint():
+    # 1. Create a call
+    c = client.post(
+        "/calls",
+        json={"prospect_name": "Temporary Lead", "prospect_role": "Analyst", "company": "Temp Corp"},
+    ).json()
+    call_id = c["id"]
+
+    # 2. Add a stage result
+    client.put(f"/calls/{call_id}/stages/1", json={"tap_key": "reached_right_person"})
+
+    # 3. Delete the call
+    del_resp = client.delete(f"/calls/{call_id}")
+    assert del_resp.status_code == 200
+    assert del_resp.json()["status"] == "deleted"
+
+    # 4. Verify 404 on subsequent get
+    get_resp = client.get(f"/calls/{call_id}")
+    assert get_resp.status_code == 404
+
+    # 5. Verify 404 on repeated delete
+    del_again = client.delete(f"/calls/{call_id}")
+    assert del_again.status_code == 404

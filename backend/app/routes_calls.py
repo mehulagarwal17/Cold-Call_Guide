@@ -11,6 +11,7 @@ from app.db import (
     is_valid_tap,
     STAGE_8_OUTCOMES,
     STAGE_NAME_MAP,
+    delete_call,
 )
 
 router = APIRouter(prefix="/calls", tags=["calls"])
@@ -189,3 +190,18 @@ def get_single_call(call_id: str) -> Dict[str, Any]:
             detail="Call not found",
         )
     return call_with_results
+
+
+@router.delete("/{call_id}")
+def delete_single_call(call_id: str) -> Dict[str, Any]:
+    """
+    Delete a call and its stage results.
+    - 404 if not found.
+    """
+    success = delete_call(call_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Call not found",
+        )
+    return {"status": "deleted", "id": call_id}

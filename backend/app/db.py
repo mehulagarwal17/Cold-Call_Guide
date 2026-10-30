@@ -400,3 +400,29 @@ def get_call_with_results(call_id: str) -> Optional[Dict[str, Any]]:
     result_call["furthest_stage_name"] = STAGE_NAME_MAP.get(f_stage, "")
     result_call["stage_results"] = stage_results
     return result_call
+
+
+def delete_call(call_id: str) -> bool:
+    """
+    Deletes a call and its associated stage results.
+    Returns True if deleted, False if call not found.
+    """
+    call = get_call(call_id)
+    if not call:
+        return False
+
+    client = get_supabase()
+    if client is not None:
+        try:
+            # Delete associated stage_results first
+            client.table("stage_results").delete().eq("call_id", call_id).execute()
+            client.table("calls").delete().eq("id", call_id).execute()
+        except Exception as e:
+            print(f"Notice: Supabase delete_call failed ({e}), using memory store")
+
+    if call_id in _local_calls:
+        del _local_calls[call_id]
+    if call_id in _local_stage_results:
+        del _local_stage_results[call_id]
+
+    return True
