@@ -173,6 +173,18 @@ export const PastCalls: React.FC<PastCallsProps> = ({
             </div>
           </div>
 
+          {/* General Call Notes (if recorded) */}
+          {selectedCallDetail.general_notes && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 12px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+                General Call Notes
+              </div>
+              <div style={{ fontSize: '13px', color: '#1e293b', whiteSpace: 'pre-wrap' }}>
+                {selectedCallDetail.general_notes}
+              </div>
+            </div>
+          )}
+
           {/* Stage by stage results */}
           <div>
             <div className="section-label" style={{ marginBottom: '8px' }}>

@@ -49,8 +49,10 @@ def build_user_prompt(
         f"Prospect: {name}, {role} at {company}",
         f"Stage reached: {furthest_stage_name} (Stage {furthest_stage_num})",
         f"Outcome: {outcome}",
-        "Stage taps and notes:",
     ]
+    if call.get("general_notes"):
+        lines.append(f"General Call Notes: {call['general_notes']}")
+    lines.append("Stage taps and notes:")
 
     for sr in sorted(stage_results, key=lambda x: x.get("stage_id", 0)):
         sid = sr.get("stage_id", 0)
@@ -108,7 +110,9 @@ def generate_summary(
 
     provider = (LLM_PROVIDER or "gemini").lower().strip()
     model = (LLM_MODEL or DEFAULT_MODELS.get(provider, "gemini-2.5-flash")).strip()
-    if provider == "gemini" and (not model or model in ("gemini-1.5-flash", "gemini-1.5-pro")):
+    if model.startswith("models/"):
+        model = model[7:]
+    if provider == "gemini" and (not model or model in ("gemini-1.5-flash", "gemini-1.5-pro", "gemini")):
         model = "gemini-2.5-flash"
     user_prompt = build_user_prompt(call, stage_results, stage_name_map)
 
@@ -139,7 +143,7 @@ def generate_summary(
                     json=payload,
                 )
                 if resp.status_code != 200:
-                    logger.error("Gemini returned non-200 status code: %s", resp.status_code)
+                    logger.error("Gemini returned non-200 status code %d: %s", resp.status_code, resp.text)
                     return None
 
                 data = resp.json()

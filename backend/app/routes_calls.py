@@ -128,6 +128,7 @@ def close_call_endpoint(
         outcome=outcome,
         summary=None,
         summary_status="pending",
+        general_notes=payload.general_notes,
     )
 
     # 2. Run LLM one-line summary (10s timeout, max 80 chars)
@@ -144,6 +145,7 @@ def close_call_endpoint(
                 outcome=outcome,
                 summary=summary_text,
                 summary_status="done",
+                general_notes=payload.general_notes,
             )
         else:
             final_call = close_call(
@@ -151,6 +153,7 @@ def close_call_endpoint(
                 outcome=outcome,
                 summary=None,
                 summary_status="failed",
+                general_notes=payload.general_notes,
             )
     except Exception:
         final_call = close_call(
@@ -158,6 +161,7 @@ def close_call_endpoint(
             outcome=outcome,
             summary=None,
             summary_status="failed",
+            general_notes=payload.general_notes,
         )
 
     return final_call

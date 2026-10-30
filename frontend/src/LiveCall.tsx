@@ -24,6 +24,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
   const [savedStagesMap, setSavedStagesMap] = useState<Record<number, StageResult>>({});
   const [selectedTap, setSelectedTap] = useState<string>('');
   const [prospectWords, setProspectWords] = useState<string>('');
+  const [generalNotes, setGeneralNotes] = useState<string>('');
 
   // Timer state
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -91,6 +92,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       setSavedStagesMap({});
       setSelectedTap('');
       setProspectWords('');
+      setGeneralNotes('');
       setClosedCallSummary(null);
     } catch (err: any) {
       setCardError({
@@ -125,8 +127,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       setCurrentCall(saveRes.call);
 
       if (activeStageId === 8) {
-        // Stage 8 Finish Call -> close with outcome = selected tap
-        const closed = await api.closeCall(currentCall.id, selectedTap);
+        // Stage 8 Finish Call -> close with outcome = selected tap and persistent general notes
+        const closed = await api.closeCall(currentCall.id, selectedTap, generalNotes);
         setCurrentCall(null);
         setClosedCallSummary(closed);
       } else {
@@ -166,8 +168,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         }
       }
 
-      // Close call immediately with ended_early
-      const closed = await api.closeCall(currentCall.id);
+      // Close call immediately with ended_early and persistent general notes
+      const closed = await api.closeCall(currentCall.id, undefined, generalNotes);
       setCurrentCall(null);
       setClosedCallSummary(closed);
     } catch (err: any) {
@@ -190,6 +192,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
     setSavedStagesMap({});
     setSelectedTap('');
     setProspectWords('');
+    setGeneralNotes('');
     onError(null);
   };
 
@@ -482,6 +485,28 @@ export const LiveCall: React.FC<LiveCallProps> = ({
           value={prospectWords}
           onChange={(e) => setProspectWords(e.target.value.slice(0, 1000))}
           maxLength={1000}
+        />
+      </div>
+
+      {/* Persistent General Call Notes Section (persists across stages until call ends) */}
+      <div className="words-box-container" style={{ marginTop: '8px' }}>
+        <div className="words-header">
+          <label htmlFor="general-notes" className="section-label" style={{ marginBottom: 0 }}>
+            General Call Notes <span style={{ fontWeight: 400, color: '#64748b', fontSize: '11px' }}>(persists across all stages)</span>
+          </label>
+          <span className={`char-counter ${generalNotes.length > 1900 ? 'limit' : ''}`}>
+            {generalNotes.length} / 2000
+          </span>
+        </div>
+        <textarea
+          id="general-notes"
+          className="words-textarea"
+          rows={2}
+          style={{ minHeight: '50px', fontSize: '12.5px' }}
+          placeholder="Overall notes about this prospect, background context, or key takeaways (persists until call finishes)..."
+          value={generalNotes}
+          onChange={(e) => setGeneralNotes(e.target.value.slice(0, 2000))}
+          maxLength={2000}
         />
       </div>
 

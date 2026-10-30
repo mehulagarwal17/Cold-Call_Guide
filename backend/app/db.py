@@ -322,20 +322,23 @@ def close_call(
     call_id: str,
     outcome: str,
     summary: Optional[str] = None,
-    summary_status: str = "skipped"
+    summary_status: str = "skipped",
+    general_notes: Optional[str] = None,
 ) -> Dict[str, Any]:
     call = get_call(call_id)
     if not call:
         raise ValueError("Call not found")
 
     ended_at = datetime.now(timezone.utc).isoformat()
-    updates = {
+    updates: Dict[str, Any] = {
         "status": "closed",
         "outcome": outcome,
         "ended_at": ended_at,
         "summary": summary,
         "summary_status": summary_status,
     }
+    if general_notes is not None:
+        updates["general_notes"] = general_notes
 
     client = get_supabase()
     if client is not None:

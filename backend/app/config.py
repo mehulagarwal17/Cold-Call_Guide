@@ -20,6 +20,6 @@ else:
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini").strip()
-LLM_API_KEY: str = os.getenv("LLM_API_KEY", "").strip() or os.getenv("GEMINI_API_KEY", "").strip()
+LLM_API_KEY: str = (os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
 LLM_MODEL: str = os.getenv("LLM_MODEL", "").strip()
 FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "").strip()

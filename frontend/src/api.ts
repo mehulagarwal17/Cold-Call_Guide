@@ -21,6 +21,7 @@ export interface Call {
   started_at: string;
   ended_at?: string | null;
   furthest_stage_name?: string;
+  general_notes?: string | null;
   stage_results?: StageResult[];
 }
 
@@ -121,9 +122,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  async closeCall(callId: string, outcome?: string): Promise<Call> {
+  async closeCall(callId: string, outcome?: string, generalNotes?: string): Promise<Call> {
     const base = getApiBaseUrl();
-    const body = outcome ? { outcome } : {};
+    const body: Record<string, any> = {};
+    if (outcome) body.outcome = outcome;
+    if (generalNotes && generalNotes.trim()) body.general_notes = generalNotes.trim();
     const res = await fetch(`${base}/calls/${callId}/close`, {
       method: 'POST',
       headers: {

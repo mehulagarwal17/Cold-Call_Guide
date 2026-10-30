@@ -39,6 +39,7 @@ class StageResultUpdate(BaseModel):
 
 class CallClose(BaseModel):
     outcome: Optional[str] = None
+    general_notes: Optional[str] = None
 
     @field_validator("outcome")
     def validate_outcome(cls, v: Optional[str]) -> Optional[str]:
@@ -46,4 +47,12 @@ class CallClose(BaseModel):
             v = v.strip()
             if not v:
                 return None
+        return v
+
+    @field_validator("general_notes")
+    def validate_general_notes(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) > 2000:
+                raise ValueError("general_notes cannot exceed 2000 characters")
         return v

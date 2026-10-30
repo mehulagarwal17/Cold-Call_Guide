@@ -83,3 +83,44 @@ def health_check() -> Dict[str, Any]:
         "time": datetime.now(timezone.utc).isoformat(),
     }
 
+
+@app.get("/debug-llm")
+def debug_llm() -> Dict[str, Any]:
+    """
+    Safe diagnostic endpoint to test LLM connectivity without leaking secrets.
+    """
+    from app.config import LLM_PROVIDER, LLM_API_KEY, LLM_MODEL
+    from app.llm import generate_summary, DEFAULT_MODELS
+
+    key_found = bool(LLM_API_KEY)
+    key_preview = (
+        (LLM_API_KEY[:4] + "..." + LLM_API_KEY[-3:])
+        if len(LLM_API_KEY) > 8
+        else ("present" if key_found else "missing")
+    )
+    provider = (LLM_PROVIDER or "gemini").lower().strip()
+    model = (LLM_MODEL or DEFAULT_MODELS.get(provider, "gemini-2.5-flash")).strip()
+
+    dummy_call = {
+        "prospect_name": "Test Prospect",
+        "prospect_role": "Director",
+        "company": "Test Co",
+        "furthest_stage": 5,
+        "furthest_stage_name": "Their need",
+        "outcome": "ended_early",
+    }
+    dummy_stages = [
+        {"stage_id": 1, "tap_key": "reached_right_person", "prospect_words": "Direct line"},
+        {"stage_id": 5, "tap_key": "described_situation", "prospect_words": "Machinery delay takes 3 weeks"},
+    ]
+
+    summary = generate_summary(dummy_call, dummy_stages, {1: "Opening", 5: "Their need"})
+    return {
+        "key_present": key_found,
+        "key_preview": key_preview,
+        "provider": provider,
+        "model": model,
+        "success": bool(summary),
+        "test_summary": summary,
+    }
+
