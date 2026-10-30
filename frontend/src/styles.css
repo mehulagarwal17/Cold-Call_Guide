@@ -1,17 +1,19 @@
 /* Cold-Call Guide Screen CSS */
 :root {
-  --bg-color: #f1f5f9;
+  --bg-color: #f5ebdd;
   --card-bg: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --border-color: #cbd5e1;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
+  --text-main: #413333;
+  --text-muted: #6b5b5b;
+  --border-color: #e6d7c3;
+  --primary: #f76e53;
+  --primary-hover: #e05b40;
+  --primary-light: #fef2f0;
+  --secondary: #315b8c;
+  --secondary-hover: #24466d;
   --danger: #dc2626;
   --danger-hover: #b91c1c;
   --success: #16a34a;
-  --surface-alt: #f8fafc;
+  --surface-alt: #fcf9f4;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -99,8 +101,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: #0f172a;
+  padding: 8px 16px;
+  background: var(--secondary);
   color: #ffffff;
 }
 
@@ -111,17 +113,17 @@ body {
 }
 
 .brand-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
 
 .call-timer {
   font-family: monospace;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.12);
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   color: #38bdf8;
 }
@@ -132,7 +134,7 @@ body {
   width: 100%;
   max-width: 410px;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .nav-link-btn {
@@ -142,26 +144,26 @@ body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 2px 4px;
   text-decoration: underline;
 }
 
 /* Start Form */
 .start-card-body {
-  padding: 20px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .form-group label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -169,8 +171,8 @@ body {
 }
 
 .form-group input {
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 8px 10px;
+  font-size: 13.5px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   outline: none;
@@ -185,21 +187,21 @@ body {
 /* Prospect Card */
 .prospect-card {
   background: var(--surface-alt);
-  padding: 10px 16px;
+  padding: 6px 16px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .prospect-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--text-main);
   line-height: 1.2;
 }
 
 .prospect-meta {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .prospect-tag {
@@ -211,13 +213,13 @@ body {
 .progress-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  padding: 10px 16px;
+  gap: 3px;
+  padding: 6px 16px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .progress-sq {
-  height: 32px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,7 +227,7 @@ body {
   border: 1px solid var(--border-color);
   background: #ffffff;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -250,7 +252,7 @@ body {
 
 /* Stage Header Info */
 .stage-info {
-  padding: 12px 16px 8px;
+  padding: 8px 16px 4px;
 }
 
 .stage-badge {
@@ -262,22 +264,22 @@ body {
 }
 
 .stage-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-main);
-  line-height: 1.2;
-  margin: 2px 0 4px;
+  line-height: 1.15;
+  margin: 1px 0 2px;
 }
 
 .stage-purpose {
-  font-size: 13px;
+  font-size: 12.5px;
   color: #334155;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 /* Quotes Section ("They may say") */
 .section-block {
-  padding: 8px 16px;
+  padding: 4px 16px;
 }
 
 .section-label {
@@ -286,20 +288,20 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .quotes-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .quote-bubble {
   background: #f8fafc;
   border-left: 3px solid #94a3b8;
-  padding: 6px 10px;
-  font-size: 12.5px;
+  padding: 4px 8px;
+  font-size: 11.5px;
   color: #1e293b;
   font-style: italic;
   border-radius: 0 4px 4px 0;
@@ -309,20 +311,20 @@ body {
 .taps-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tap-btn {
-  min-height: 48px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 6px 8px;
   background: #ffffff;
   border: 1.5px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   color: #1e293b;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   text-align: left;
-  line-height: 1.25;
+  line-height: 1.2;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -344,14 +346,14 @@ body {
 
 /* Prospect Words Textarea */
 .words-box-container {
-  padding: 8px 16px 12px;
+  padding: 4px 16px 6px;
 }
 
 .words-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .char-counter {
@@ -366,22 +368,22 @@ body {
 
 .words-textarea {
   width: 100%;
-  min-height: 60px;
-  padding: 8px 10px;
-  font-size: 13.5px;
+  min-height: 42px;
+  padding: 6px 8px;
+  font-size: 12.5px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   outline: none;
   font-family: inherit;
   resize: vertical;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .words-textarea.tall {
-  min-height: 145px;
+  min-height: 85px;
   border: 2px solid #3b82f6;
   background: #f0f7ff;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .words-textarea:focus {

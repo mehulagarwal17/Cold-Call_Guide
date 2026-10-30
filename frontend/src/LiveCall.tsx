@@ -508,109 +508,81 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         </div>
       </div>
 
-      {/* Balto-Style Live AI Speech Copilot Bar */}
+      {/* Balto AI Live Copilot Widget */}
       <div
         style={{
-          background: isListening ? '#f0fdf4' : '#f8fafc',
-          border: `1px solid ${isListening ? '#86efac' : '#e2e8f0'}`,
+          background: isListening ? 'var(--primary-light)' : 'var(--surface-alt)',
+          border: `1px solid ${isListening ? 'var(--primary)' : 'var(--border-color)'}`,
           borderRadius: '8px',
-          padding: '12px',
+          padding: '8px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
-          transition: 'all 0.2s ease',
+          gap: '6px',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '14px' }}>{isListening ? '🟢' : '🎙'}</span>
-            <strong style={{ fontSize: '13px', color: '#0f172a' }}>Balto AI Live Copilot</strong>
-            {isListening && (
-              <span
-                style={{
-                  fontSize: '10px',
-                  background: '#dcfce7',
-                  color: '#166534',
-                  padding: '2px 6px',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  animation: 'pulse 1.5s infinite',
-                }}
-              >
-                LISTENING LIVE
-              </span>
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={isListening ? stopListening : startListening}
+              title={isListening ? "Stop listening" : "Start live mic copilot"}
+              style={{
+                background: isListening ? 'var(--danger)' : 'var(--primary)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '15px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              🎙
+            </button>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Balto AI Copilot
+                {isListening && (
+                  <span style={{ fontSize: '9px', background: '#dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '8px', fontWeight: 700 }}>
+                    LISTENING
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
+                {isListening ? 'Listening to call...' : 'Click mic to listen or test below'}
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={isListening ? stopListening : startListening}
-            style={{
-              background: isListening ? '#dc2626' : '#0284c7',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            }}
-          >
-            {isListening ? 'Stop Listening' : '🎙 Start Live AI Copilot'}
-          </button>
         </div>
 
+        {/* Decent Suggestion Box given by LLM / Copilot */}
         <div
           style={{
-            fontSize: '12.5px',
-            color: '#334155',
             background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            border: '1.5px solid var(--border-color)',
             borderRadius: '6px',
             padding: '8px 10px',
-            lineHeight: 1.4,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
           }}
         >
-          {aiLivePrompt}
-        </div>
-
-        {liveTranscript && (
-          <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', maxHeight: '40px', overflowY: 'auto' }}>
-            <strong>Heard:</strong> "{liveTranscript}"
+          <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            ⚡ AI Real-Time Suggestion
           </div>
-        )}
-
-        {/* Quick Test / Simulate Prospect Speech buttons for iframe environments */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
-          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Simulate Prospect Speech (Instant AI Copilot Test):</span>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {[
-              'Who is calling?',
-              'Send me an email',
-              'Too expensive',
-              'Already use a competitor',
-              'Delivery takes 3 weeks',
-              'Let\'s schedule a demo'
-            ].map((phrase, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSimulatePhrase(phrase)}
-                style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  borderRadius: '12px',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                }}
-              >
-                "{phrase}"
-              </button>
-            ))}
+          <div style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, lineHeight: 1.35 }}>
+            {aiLivePrompt}
           </div>
+          {liveTranscript && (
+            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>
+              Heard: "{liveTranscript}"
+            </div>
+          )}
         </div>
       </div>
 
