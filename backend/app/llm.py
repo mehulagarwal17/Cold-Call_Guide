@@ -212,8 +212,26 @@ def generate_copilot_response(
     stage_name: str,
     prospect_utterance: str,
 ) -> str:
+    cleaned_utterance = (prospect_utterance or "").strip()
+    if not cleaned_utterance:
+        return "Listening... Speak into your microphone or pick a test phrase to get AI coaching."
+
+    # Dynamic smart fallback analysis
+    lower = cleaned_utterance.lower()
+    fallback_resp = f"Acknowledge \"{cleaned_utterance}\". Pivot by asking: 'How are you currently tackling that challenge at {call.get('company', 'your company')}?'"
+    if any(w in lower for w in ["who", "calling", "where", "what company"]):
+        fallback_resp = f"State your identity clearly: 'Hi {call.get('prospect_name', 'there')}, calling from Meridian. We help {call.get('company', 'your team')} accelerate pipeline.'"
+    elif any(w in lower for w in ["price", "cost", "expensive", "budget", "charge"]):
+        fallback_resp = f"Isolate cost vs value: 'I completely understand. Compared to losing revenue on slow responses, what is your current ROI target?'"
+    elif any(w in lower for w in ["competitor", "already use", "vendor", "happy"]):
+        fallback_resp = f"Differentiate: 'That's great you have a tool in place. What is the one bottleneck you wish it solved better?'"
+    elif any(w in lower for w in ["email", "whatsapp", "send", "message"]):
+        fallback_resp = f"Secure permission: 'Happy to drop that over. What email should I send the breakdown to?'"
+    elif any(w in lower for w in ["busy", "meeting", "call back", "later"]):
+        fallback_resp = f"Respect time & lock time: 'I know you're tied up. Can I drop you a 2-min brief on Thursday at 10 AM?'"
+
     if not LLM_API_KEY:
-        return f"Acknowledge \"{prospect_utterance}\", validate their concern, and pivot to uncovering their core pain point."
+        return fallback_resp
 
     provider = (LLM_PROVIDER or "gemini").lower().strip()
     model = (LLM_MODEL or DEFAULT_MODELS.get(provider, "gemini-2.5-flash")).strip()
@@ -225,7 +243,7 @@ def generate_copilot_response(
     prompt = (
         f"Prospect: {call.get('prospect_name')}, {call.get('prospect_role')} at {call.get('company')}\n"
         f"Current Stage: Stage {current_stage_id} ({stage_name})\n"
-        f"Prospect said: \"{prospect_utterance}\"\n"
+        f"Prospect said: \"{cleaned_utterance}\"\n"
         f"Provide the best tactical coaching advice and exact reply script."
     )
 
@@ -237,7 +255,7 @@ def generate_copilot_response(
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
                     "maxOutputTokens": 100,
-                    "temperature": 0.3,
+                    "temperature": 0.4,
                     "thinkingConfig": {"thinkingBudget": 0},
                 },
             }
@@ -248,16 +266,17 @@ def generate_copilot_response(
                     json=payload,
                 )
                 if resp.status_code != 200:
-                    return f"Acknowledge \"{prospect_utterance}\" and guide the conversation forward."
+                    return fallback_resp
                 data = resp.json()
                 candidates = data.get("candidates", [])
                 if not candidates:
-                    return f"Address \"{prospect_utterance}\" directly and ask an open question."
+                    return fallback_resp
                 parts = candidates[0].get("content", {}).get("parts", [])
                 if not parts:
-                    return f"Acknowledge \"{prospect_utterance}\" and proceed."
-                return parts[0].get("text", "").strip()
+                    return fallback_resp
+                text = parts[0].get("text", "").strip()
+                return text if text else fallback_resp
     except Exception:
         pass
 
-    return f"Acknowledge \"{prospect_utterance}\" and ask an open-ended follow-up question."
+    return fallback_resp
