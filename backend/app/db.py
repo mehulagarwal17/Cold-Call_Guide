@@ -233,16 +233,24 @@ def create_call(prospect_name: str, prospect_role: str, company: str) -> Dict[st
 
 def get_call(call_id: str) -> Optional[Dict[str, Any]]:
     client = get_supabase()
+    call_data = None
     if client is not None:
         try:
             res = client.table("calls").select("*").eq("id", call_id).execute()
             if res.data:
-                return res.data[0]
-            return None
+                call_data = res.data[0]
         except Exception as e:
             print(f"Notice: Supabase get_call failed ({e}), falling back to memory store")
+            call_data = _local_calls.get(call_id)
+    else:
+        call_data = _local_calls.get(call_id)
 
-    return _local_calls.get(call_id)
+    if call_data:
+        item = dict(call_data)
+        if item.get("status") == "closed" and item.get("summary_status") == "pending" and not item.get("summary"):
+            item["summary_status"] = "failed"
+        return item
+    return None
 
 
 def upsert_stage_result(
@@ -355,23 +363,23 @@ def close_call(
 
 def list_calls() -> List[Dict[str, Any]]:
     client = get_supabase()
+    calls = []
     if client is not None:
         try:
             res = client.table("calls").select("*").order("started_at", desc=True).execute()
             calls = res.data if res.data else []
-            # Enrich with furthest_stage_name
-            for c in calls:
-                f_stage = c.get("furthest_stage", 1)
-                c["furthest_stage_name"] = STAGE_NAME_MAP.get(f_stage, "")
-            return calls
         except Exception as e:
             print(f"Notice: Supabase list_calls failed ({e}), using memory store")
+            calls = list(_local_calls.values())
+    else:
+        calls = list(_local_calls.values())
 
-    calls = list(_local_calls.values())
     calls.sort(key=lambda x: x.get("started_at", ""), reverse=True)
     enriched = []
     for c in calls:
         item = dict(c)
+        if item.get("status") == "closed" and item.get("summary_status") == "pending" and not item.get("summary"):
+            item["summary_status"] = "failed"
         f_stage = item.get("furthest_stage", 1)
         item["furthest_stage_name"] = STAGE_NAME_MAP.get(f_stage, "")
         enriched.append(item)
