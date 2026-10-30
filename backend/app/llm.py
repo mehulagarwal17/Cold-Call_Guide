@@ -196,3 +196,68 @@ def generate_summary(
         # Never log API key or sensitive request headers
         logger.error("LLM generation failed: %s (%s)", type(exc).__name__, str(exc))
         return None
+
+
+COPILOT_SYSTEM_PROMPT = (
+    "You are Balto AI, an expert real-time sales coach and cold-call copilot.\n"
+    "The user is on a live B2B cold call at a specific stage.\n"
+    "When given what the prospect said and the current call context, provide a short, razor-sharp, actionable tactical suggestion and exact words the salesperson should say next.\n"
+    "Keep your response under 150 characters, punchy, and direct."
+)
+
+
+def generate_copilot_response(
+    call: Dict[str, Any],
+    current_stage_id: int,
+    stage_name: str,
+    prospect_utterance: str,
+) -> str:
+    if not LLM_API_KEY:
+        return f"Acknowledge \"{prospect_utterance}\", validate their concern, and pivot to uncovering their core pain point."
+
+    provider = (LLM_PROVIDER or "gemini").lower().strip()
+    model = (LLM_MODEL or DEFAULT_MODELS.get(provider, "gemini-2.5-flash")).strip()
+    if model.startswith("models/"):
+        model = model[7:]
+    if provider == "gemini" and (not model or model in ("gemini-1.5-flash", "gemini-1.5-pro", "gemini")):
+        model = "gemini-2.5-flash"
+
+    prompt = (
+        f"Prospect: {call.get('prospect_name')}, {call.get('prospect_role')} at {call.get('company')}\n"
+        f"Current Stage: Stage {current_stage_id} ({stage_name})\n"
+        f"Prospect said: \"{prospect_utterance}\"\n"
+        f"Provide the best tactical coaching advice and exact reply script."
+    )
+
+    try:
+        if provider == "gemini":
+            gemini_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            payload = {
+                "system_instruction": {"parts": [{"text": COPILOT_SYSTEM_PROMPT}]},
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "maxOutputTokens": 100,
+                    "temperature": 0.3,
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
+            }
+            with httpx.Client(timeout=8.0) as client:
+                resp = client.post(
+                    gemini_endpoint,
+                    params={"key": LLM_API_KEY},
+                    json=payload,
+                )
+                if resp.status_code != 200:
+                    return f"Acknowledge \"{prospect_utterance}\" and guide the conversation forward."
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    return f"Address \"{prospect_utterance}\" directly and ask an open question."
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    return f"Acknowledge \"{prospect_utterance}\" and proceed."
+                return parts[0].get("text", "").strip()
+    except Exception:
+        pass
+
+    return f"Acknowledge \"{prospect_utterance}\" and ask an open-ended follow-up question."

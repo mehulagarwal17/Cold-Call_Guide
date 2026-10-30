@@ -162,4 +162,14 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async askCopilot(callId: string, utterance: string, stageId: number): Promise<{ suggestion: string }> {
+    const base = getApiBaseUrl();
+    const res = await fetch(`${base}/calls/${callId}/copilot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ utterance, stage_id: stageId }),
+    });
+    return handleResponse(res);
+  },
 };

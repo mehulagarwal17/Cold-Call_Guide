@@ -205,3 +205,33 @@ def delete_single_call(call_id: str) -> Dict[str, Any]:
             detail="Call not found",
         )
     return {"status": "deleted", "id": call_id}
+
+
+@router.post("/{call_id}/copilot")
+def call_copilot_endpoint(
+    call_id: str,
+    payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Real-time Gemini AI Copilot endpoint: receives prospect utterance,
+    generates contextual B2B cold call advice using Gemini.
+    """
+    call = get_call(call_id)
+    if not call:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Call not found",
+        )
+
+    utterance = payload.get("utterance", "")
+    stage_id = int(payload.get("stage_id", 1))
+    stage_name = STAGE_NAME_MAP.get(stage_id, f"Stage {stage_id}")
+
+    from app.llm import generate_copilot_response
+    suggestion = generate_copilot_response(
+        call=call,
+        current_stage_id=stage_id,
+        stage_name=stage_name,
+        prospect_utterance=utterance,
+    )
+    return {"suggestion": suggestion, "utterance": utterance}

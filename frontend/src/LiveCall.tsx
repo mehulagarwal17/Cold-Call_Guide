@@ -58,33 +58,14 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         setAiLivePrompt('🎙 Listening... AI Copilot is active and analyzing conversation in real-time.');
       };
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = async (event: any) => {
         let transcriptChunk = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           transcriptChunk += event.results[i][0].transcript;
         }
         setLiveTranscript(transcriptChunk);
-
-        // Real-time keyword & phrase analysis (Balto-style prompts & stage guidance)
-        const lower = transcriptChunk.toLowerCase();
-        if (lower.includes('who') || lower.includes('calling') || lower.includes('where')) {
-          setActiveStageId(2);
-          setAiLivePrompt('💡 Copilot: Prospect asked who is calling. State your company & purpose clearly.');
-        } else if (lower.includes('email') || lower.includes('whatsapp') || lower.includes('send me') || lower.includes('drop me')) {
-          setActiveStageId(3);
-          setAiLivePrompt('💡 Copilot: Permission requested! Agree to send a quick WhatsApp or email summary.');
-        } else if (lower.includes('price') || lower.includes('cost') || lower.includes('expensive') || lower.includes('budget') || lower.includes('charge')) {
-          setActiveStageId(6);
-          setAiLivePrompt('💡 Copilot: Price objection! Isolate cost vs. value and ask what their current loss is.');
-        } else if (lower.includes('competitor') || lower.includes('already use') || lower.includes('vendor')) {
-          setActiveStageId(6);
-          setAiLivePrompt('💡 Copilot: Competitor mentioned. Acknowledge and ask what they wish was faster.');
-        } else if (lower.includes('problem') || lower.includes('issue') || lower.includes('delay') || lower.includes('time') || lower.includes('hours') || lower.includes('weeks')) {
-          setActiveStageId(5);
-          setAiLivePrompt('💡 Copilot: Pain point detected! Type this exact quote into "Their words" in Stage 5.');
-        } else if (lower.includes('meeting') || lower.includes('demo') || lower.includes('call me on') || lower.includes('schedule')) {
-          setActiveStageId(8);
-          setAiLivePrompt('💡 Copilot: Closing signal detected! Move to Stage 8 to book the meeting.');
+        if (transcriptChunk.trim().length > 3) {
+          await handleSimulatePhrase(transcriptChunk);
         }
       };
 
@@ -119,29 +100,18 @@ export const LiveCall: React.FC<LiveCallProps> = ({
     setAiLivePrompt('Live AI Copilot paused.');
   };
 
-  const handleSimulatePhrase = (phrase: string) => {
+  const handleSimulatePhrase = async (phrase: string) => {
     setLiveTranscript(phrase);
-    const lower = phrase.toLowerCase();
-    if (lower.includes('who') || lower.includes('calling') || lower.includes('where')) {
-      setActiveStageId(2);
-      setAiLivePrompt('💡 Copilot: Prospect asked who is calling. State your company & purpose clearly.');
-    } else if (lower.includes('email') || lower.includes('whatsapp') || lower.includes('send me') || lower.includes('drop me')) {
-      setActiveStageId(3);
-      setAiLivePrompt('💡 Copilot: Permission requested! Agree to send a quick WhatsApp or email summary.');
-    } else if (lower.includes('price') || lower.includes('cost') || lower.includes('expensive') || lower.includes('budget') || lower.includes('charge')) {
-      setActiveStageId(6);
-      setAiLivePrompt('💡 Copilot: Price objection! Isolate cost vs. value and ask what their current loss is.');
-    } else if (lower.includes('competitor') || lower.includes('already use') || lower.includes('vendor')) {
-      setActiveStageId(6);
-      setAiLivePrompt('💡 Copilot: Competitor mentioned. Acknowledge and ask what they wish was faster.');
-    } else if (lower.includes('problem') || lower.includes('issue') || lower.includes('delay') || lower.includes('time') || lower.includes('hours') || lower.includes('weeks')) {
-      setActiveStageId(5);
-      setAiLivePrompt('💡 Copilot: Pain point detected! Type this exact quote into "Their words" in Stage 5.');
-    } else if (lower.includes('meeting') || lower.includes('demo') || lower.includes('call me on') || lower.includes('schedule')) {
-      setActiveStageId(8);
-      setAiLivePrompt('💡 Copilot: Closing signal detected! Move to Stage 8 to book the meeting.');
-    } else {
-      setAiLivePrompt(`💡 Copilot analyzed: "${phrase}". Keep probing their needs.`);
+    setAiLivePrompt('⚡ Gemini AI is thinking...');
+    try {
+      if (currentCall) {
+        const res = await api.askCopilot(currentCall.id, phrase, activeStageId);
+        setAiLivePrompt(res.suggestion);
+      } else {
+        setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and address their business needs.`);
+      }
+    } catch {
+      setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and ask an open-ended question.`);
     }
   };
 
