@@ -17,75 +17,6 @@
 
 ---
 
-## 🌐 Live Deployment Links
-
-- **Frontend Application (Vercel)**: [https://cold-call-guide-kohl.vercel.app](https://cold-call-guide-kohl.vercel.app)
-- **Backend API Server (Render)**: [https://cold-call-guide-s90e.onrender.com](https://cold-call-guide-s90e.onrender.com)
-
----
-
-## 🤖 LLM Implementation & Usage
-
-This project leverages **Google Gemini (`gemini-2.5-flash`)** across three core intelligent pillars:
-
-1. **Real-Time Balto AI Copilot**:
-   - **Purpose**: Listens to live call utterances (via speech-to-text / voice simulation) and analyzes current stage context.
-   - **Function**: Instantly provides razor-sharp tactical coaching suggestions and exact reply scripts to overcome objections in real time.
-
-2. **Automated Post-Call Intelligence**:
-   - **Purpose**: Automatically processes closed calls.
-   - **Function**: Generates concise one-line summaries (`<pain point>; <next step>`) capped at 80 characters for instant CRM logging.
-
-3. **Conversational AI Follow-Up Email Generator**:
-   - **Purpose**: Post-call client outreach.
-   - **Function**: Analyzes the complete call flow, stage results, tap options, and final outcomes to draft a natural, human-like, bespoke B2B follow-up email without rigid templates.
-
-## Supabase SQL Schema (schema.sql)
-```
-   create extension if not exists pgcrypto;
-
-create table stages (
-  id smallint primary key,
-  name text not null,
-  purpose text not null,
-  prospect_says jsonb not null default '[]',
-  tap_options jsonb not null default '[]',
-  sort_order smallint not null
-);
-
-create table calls (
-  id uuid primary key default gen_random_uuid(),
-  prospect_name text not null,
-  prospect_role text not null,
-  company text not null,
-  status text not null default 'in_progress' check (status in ('in_progress','closed')),
-  current_stage smallint not null default 1,
-  furthest_stage smallint not null default 1,
-  outcome text check (outcome in ('meeting_booked','follow_up_agreed','not_interested','no_conversation','ended_early')),
-  summary text,
-  summary_status text not null default 'pending' check (summary_status in ('summary_status','pending','done','failed','skipped')),
-  started_at timestamptz not null default now(),
-  ended_at timestamptz
-);
-
-create table stage_results (
-  id uuid primary key default gen_random_uuid(),
-  call_id uuid not null references calls(id) on delete cascade,
-  stage_id smallint not null references stages(id),
-  tap_key text,
-  prospect_words text,
-  saved_at timestamptz not null default now(),
-  unique (call_id, stage_id)
-);
-
-create index on calls (started_at desc);
-create index on stage_results (call_id);
-
-alter table stages enable row level security;
-alter table calls enable row level security;
-alter table stage_results enable row level security;
-```
-
 ## ✨ Key Features
 
 - **🎯 8-Stage Cold-Call Methodology**: Guided framework covering *Opening, Purpose, Permission, Their Business, Their Need, Objection, Next Step, and Close*.
@@ -127,30 +58,39 @@ alter table stage_results enable row level security;
    ```bash
    git clone https://github.com/your-username/meridian-cold-call-guide.git
    cd meridian-cold-call-guide
+   ```
 
-Install frontend dependencies:
+2. **Install frontend dependencies**:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. **Install backend dependencies**:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   cd .
+   ```
 
-Install backend dependencies:
+4. **Run the Development Server**:
+   ```bash
+   npm run dev
+   ```
 
-```Bash
-cd backend
-pip install -r requirements.txt
-cd ..
-```
+---
 
-Run the Development Server:
+## 📸 Screenshots & UI Preview
 
-```Bash
-npm run dev
-```
+| Live Call 8-Stage Guide | Balto AI Live Copilot | Past Calls History |
+| :---: | :---: | :---: |
+| *Structured stage flow & taps* | *Real-time Gemini voice suggestions* | *Call logs & AI summaries* |
 
-📄 License
+---
 
-Distributed under the MIT License. See LICENSE for more information.
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
 <div align="center">
-<p>Built with ❤️ for high-performing sales teams.</p>
+  <p>Built with ❤️ for high-performing sales teams.</p>
 </div>
