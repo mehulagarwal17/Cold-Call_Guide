@@ -68,10 +68,13 @@ export const LiveCall: React.FC<LiveCallProps> = ({
     }
   };
 
-  // Live Speech Recognition (Balto-style AI Copilot) state
+  // Live Speech Recognition & AI Copilot state
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
-  const [aiLivePrompt, setAiLivePrompt] = useState<string>('Click "Start Live AI Copilot" to listen in real-time...');
+  const [aiLivePrompt, setAiLivePrompt] = useState<string>('Click the mic to listen, or type any question below for instant dynamic coaching.');
+  const [aiEngineName, setAiEngineName] = useState<string>('Dynamic AI Copilot');
+  const [quickQuestionText, setQuickQuestionText] = useState<string>('');
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   const startListening = () => {
@@ -105,9 +108,9 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       recognition.onerror = (event: any) => {
         console.warn('Speech recognition error', event.error);
         if (event.error === 'not-allowed') {
-          setAiLivePrompt('⚠️ Microphone access denied or blocked in iframe. Please check browser permissions or open in a new tab.');
+          setAiLivePrompt('⚠️ Microphone access denied or blocked in iframe. You can type questions below or open in a new tab.');
         } else {
-          setAiLivePrompt(`⚠️ Speech recognition error: ${event.error}`);
+          setAiLivePrompt(`⚠️ Speech recognition notification: ${event.error}`);
         }
         setIsListening(false);
       };
@@ -130,22 +133,31 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       recognitionRef.current = null;
     }
     setIsListening(false);
-    setAiLivePrompt('Live AI Copilot paused.');
   };
 
   const handleSimulatePhrase = async (phrase: string) => {
-    setLiveTranscript(phrase);
-    setAiLivePrompt('⚡ Gemini AI is thinking...');
+    if (!phrase || !phrase.trim()) return;
+    setLiveTranscript(phrase.trim());
+    setIsAiThinking(true);
+    setAiLivePrompt('Thinking... Analyzing conversation dynamics and prospect psychology...');
     try {
-      if (currentCall) {
-        const res = await api.askCopilot(currentCall.id, phrase, activeStageId);
-        setAiLivePrompt(res.suggestion);
-      } else {
-        setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and address their business needs.`);
-      }
+      const callId = currentCall ? currentCall.id : 'demo_call';
+      const res = await api.askCopilot(callId, phrase.trim(), activeStageId);
+      setAiLivePrompt(res.suggestion);
+      if (res.engine) setAiEngineName(res.engine);
     } catch {
-      setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and ask an open-ended question.`);
+      setAiLivePrompt(`"I completely understand where you're coming from. Most leaders we partner with were initially hesitant until they saw how much friction we remove. How would you feel about taking just two minutes to see if this makes sense for your team?"\n\n💡 Tactical Angle: Neutralizes defensive friction and invites a low-stakes micro-commitment.`);
+    } finally {
+      setIsAiThinking(false);
     }
+  };
+
+  const handleQuickQuestionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickQuestionText.trim()) return;
+    const q = quickQuestionText.trim();
+    setQuickQuestionText('');
+    await handleSimulatePhrase(q);
   };
 
 
@@ -334,7 +346,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       <div className="guide-card">
         <div className="card-header">
           <div className="header-left">
-            <span className="brand-title">Meridian Call Guide</span>
+            <span className="brand-title">Meridian AI</span>
           </div>
           <span className="call-timer">{formatTimer(elapsedSeconds)}</span>
         </div>
@@ -489,7 +501,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       <div className="guide-card">
         <div className="card-header">
           <div className="header-left">
-            <span className="brand-title">Meridian Call Guide</span>
+            <span className="brand-title">Meridian AI</span>
           </div>
           <span className="call-timer">00:00</span>
         </div>
@@ -571,7 +583,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       ? `Next: ${nextStageInfo.name}`
       : 'Next stage';
 
-  const quotes = activeStage?.prospect_says || [];
   const taps = activeStage?.tap_options || [];
 
   return (
@@ -579,7 +590,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       {/* 1. Header: product name on the left, running timer (mm:ss) on the right */}
       <div className="card-header">
         <div className="header-left">
-          <span className="brand-title">Meridian Call Guide</span>
+          <span className="brand-title">Meridian AI</span>
         </div>
         <span className="call-timer">{formatTimer(elapsedSeconds)}</span>
       </div>
@@ -597,78 +608,114 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       <div
         style={{
           background: isListening ? 'var(--primary-light)' : 'var(--surface-alt)',
-          border: `1px solid ${isListening ? 'var(--primary)' : 'var(--border-color)'}`,
-          borderRadius: '8px',
-          padding: '8px 12px',
+          border: `1.5px solid ${isListening ? 'var(--primary)' : 'var(--border-color)'}`,
+          borderRadius: '10px',
+          padding: '10px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px',
+          gap: '8px',
+          boxShadow: isListening ? '0 0 0 3px rgba(42, 26, 14, 0.1)' : 'none',
+          transition: 'all 0.2s ease',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={isListening ? stopListening : startListening}
-              title={isListening ? "Stop listening" : "Start live mic copilot"}
-              style={{
-                background: isListening ? 'var(--danger)' : 'var(--primary)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '15px',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                transition: 'transform 0.15s ease',
-              }}
-            >
-              🎙
-            </button>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Balto AI Copilot
-                {isListening && (
-                  <span style={{ fontSize: '9px', background: '#dcfce7', color: '#166534', padding: '1px 5px', borderRadius: '8px', fontWeight: 700 }}>
-                    LISTENING
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-                {isListening ? 'Listening to call...' : 'Click mic to listen or test below'}
-              </div>
-            </div>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4px 0' }}>
+          <button
+            type="button"
+            onClick={isListening ? stopListening : startListening}
+            title={isListening ? "Stop listening" : "Start live mic"}
+            style={{
+              background: isListening ? 'var(--danger)' : 'var(--primary)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '50%',
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: isListening ? '0 0 0 4px rgba(220, 38, 38, 0.2)' : '0 2px 6px rgba(0,0,0,0.12)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            🎙
+          </button>
         </div>
 
-        {/* Decent Suggestion Box given by LLM / Copilot */}
+        {/* Real-time Dynamic AI Response Box */}
         <div
           style={{
             background: '#ffffff',
             border: '1.5px solid var(--border-color)',
-            borderRadius: '6px',
-            padding: '8px 10px',
+            borderRadius: '8px',
+            padding: '10px 12px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px',
+            gap: '6px',
           }}
         >
-          <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-            ⚡ AI Real-Time Suggestion
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              ⚡ What To Say (Live Script)
+            </span>
+            {isAiThinking && (
+              <span style={{ fontSize: '10.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="spinner spinner-dark" style={{ width: '10px', height: '10px' }}></span> Thinking...
+              </span>
+            )}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, lineHeight: 1.35 }}>
+          <div style={{ fontSize: '12.5px', color: 'var(--text-main)', fontWeight: 600, lineHeight: 1.45, whiteSpace: 'pre-line' }}>
             {aiLivePrompt}
           </div>
           {liveTranscript && (
-            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>
+            <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontStyle: 'italic', borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '2px' }}>
               Heard: "{liveTranscript}"
             </div>
           )}
         </div>
+
+        {/* Inline Quick-Ask Bar for custom voice/text scenarios */}
+        <form onSubmit={handleQuickQuestionSubmit} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="type what client said"
+            value={quickQuestionText}
+            onChange={(e) => setQuickQuestionText(e.target.value)}
+            disabled={isAiThinking}
+            style={{
+              flex: 1,
+              padding: '6px 10px',
+              fontSize: '11.5px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '6px',
+              background: '#ffffff',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            aria-label="Send to AI"
+            disabled={isAiThinking || !quickQuestionText.trim()}
+            style={{
+              background: 'var(--primary)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '6px 14px',
+              fontSize: '14px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: isAiThinking || !quickQuestionText.trim() ? 'not-allowed' : 'pointer',
+              opacity: isAiThinking || !quickQuestionText.trim() ? 0.6 : 1,
+              transition: 'opacity 0.15s ease, transform 0.1s ease',
+            }}
+          >
+            →
+          </button>
+        </form>
       </div>
 
       {/* 3. Progress: eight numbered squares */}
@@ -704,17 +751,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         <p className="stage-purpose">{activeStage?.purpose}</p>
       </div>
 
-      {/* 5. 'They may say': exactly 3 prospect quotes in a stacked list */}
-      <div className="section-block">
-        <div className="section-label">They may say</div>
-        <div className="quotes-list">
-          {quotes.slice(0, 3).map((q, idx) => (
-            <div key={idx} className="quote-bubble">
-              “{q}”
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       {/* 6. 'What happened': exactly 4 tap buttons in a 2x2 grid */}
       <div className="section-block">

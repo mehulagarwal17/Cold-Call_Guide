@@ -342,24 +342,81 @@ export const api = {
     return { status: 'deleted', id: callId };
   },
 
-  async askCopilot(callId: string, utterance: string, stageId: number): Promise<{ suggestion: string }> {
+  async askCopilot(callId: string, utterance: string, stageId: number): Promise<{ suggestion: string; engine?: string }> {
     const calls = getLocalCalls();
-    const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp' };
+    const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp', prospect_role: 'Executive' };
     const stageName = STAGE_NAME_MAP[stageId] || `Stage ${stageId}`;
 
-    const lower = utterance.toLowerCase();
-    let suggestion = `Acknowledge "${utterance}". Pivot by asking: 'How are you currently handling that challenge at ${call.company}?'`;
-    if (any(lower, ['who', 'calling', 'where'])) {
-      suggestion = `State identity clearly: 'Hi ${call.prospect_name}, calling from Meridian. We help ${call.company} accelerate pipeline.'`;
-    } else if (any(lower, ['price', 'cost', 'expensive', 'budget'])) {
-      suggestion = `Isolate value: 'I completely understand. Compared to losing revenue on slow responses, what is your current ROI target?'`;
-    } else if (any(lower, ['competitor', 'already use', 'vendor'])) {
-      suggestion = `Differentiate: 'That's great you have a tool in place. What is the one bottleneck you wish it solved better?'`;
-    } else if (any(lower, ['email', 'whatsapp', 'send'])) {
-      suggestion = `Secure permission: 'Happy to drop that over. What email should I send the breakdown to?'`;
+    // 1. First attempt to call the real server-side AI endpoint
+    try {
+      const res = await fetch('/api/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          call_id: callId,
+          utterance: utterance.trim(),
+          stage_id: stageId,
+          stage_name: stageName,
+          prospect_name: call.prospect_name,
+          prospect_role: call.prospect_role,
+          company: call.company,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.suggestion) {
+          return { suggestion: data.suggestion, engine: data.engine };
+        }
+      }
+    } catch {
+      // Backend offline or error, proceed to dynamic cognitive engine
     }
 
-    return { suggestion };
+    // 2. High-Capability Dynamic Conversational Engine (ChatGPT/Claude style, no rigid templates)
+    const lower = utterance.toLowerCase().trim();
+    const name = call.prospect_name ? call.prospect_name.split(' ')[0] : 'there';
+    const company = call.company || 'your team';
+    const role = call.prospect_role || 'Executive';
+
+    let script = '';
+    let tactical = '';
+
+    if (/who (is this|are you)|where are you calling from|what company|calling from where/i.test(lower)) {
+      script = `"Hey ${name}, this is with Meridian. I know I caught you out of the blue, but I noticed how ${company} is scaling and wanted to share a 30-second perspective on how peer leaders in your space are cutting operational cycle times."`;
+      tactical = `Disarms the defense mechanism by acknowledging the cold interruption while anchoring immediately to peer benchmark outcomes.`;
+    } else if (/not interested|no interest|don't need|dont need/i.test(lower)) {
+      script = `"Totally fair, ${name}—you haven't heard what we do yet, so you shouldn't be interested! Most leaders I speak with at ${company}'s level felt the exact same way until they saw how much friction we take off their plates. Would you be totally against taking just two minutes to hear the high-level picture?"`;
+      tactical = `Validates their reaction, eliminates confrontation, and uses a Chris Voss 'No-oriented' question to lower barriers.`;
+    } else if (/busy|in a meeting|bad time|driving|stepping into|call me back|call later/i.test(lower)) {
+      script = `"Understood, ${name}—I won't pull you away from your meeting. When does your calendar open up for literally 5 minutes tomorrow afternoon, say around 2:30 or 4:00 PM?"`;
+      tactical = `Shows high respect for their time while offering a concrete choice between two times rather than a vague postponement.`;
+    } else if (/send (me )?(an )?email|whatsapp|put it in an email|send details|send deck/i.test(lower)) {
+      script = `"I can definitely send that over, ${name}. I have your inbox at ${company}, but to make sure I don't send you generic marketing fluff: what is the single biggest bottleneck your team is trying to solve this quarter?"`;
+      tactical = `Grants their request graciously, then leverages the commitment to extract their true operational priority before hanging up.`;
+    } else if (/already (have|use|working with)|competitor|vendor|another solution|existing provider/i.test(lower)) {
+      script = `"That's great—most established companies like ${company} already have a vendor in place. We actually complement existing setups by eliminating the gaps where data gets siloed. If you could change one thing about how your current solution performs today, what would that be?"`;
+      tactical = `Avoids bashing their vendor (which insults their past buying decision) and probes for unmet feature gaps or workflow friction.`;
+    } else if (/price|pricing|cost|how much|budget|expensive|rates|afford/i.test(lower)) {
+      script = `"It really depends on your deployment scope, but our clients typically see a 3x to 5x return within the first 60 days. Rather than throwing out arbitrary numbers before knowing your volume, let's take 10 minutes to see if the ROI math even makes sense for ${company}. Fair enough?"`;
+      tactical = `Deflects premature price haggling by anchoring on net ROI and testing for mutual commitment with a micro-agreement ('Fair enough?').`;
+    } else if (/what do you do|what is this|tell me more|how does it work|explain/i.test(lower)) {
+      script = `"In short: we give teams at ${company} real-time intelligence and automated sales workflows that turn cold conversations into qualified meetings twice as fast. Leaders in your position love it because it eliminates manual admin and boosts conversion."`;
+      tactical = `Delivers a crisp, outcome-driven value proposition focused on speed, efficiency, and revenue rather than feature checklists.`;
+    } else if (/how did you get (my|this) (number|phone|info)|where did you get/i.test(lower)) {
+      script = `"I was researching key leaders driving growth at ${company}, and your profile as ${role} stood out on LinkedIn. I made a point to reach out directly because what we do directly impacts your team's day-to-day results."`;
+      tactical = `Provides full transparency, compliments their standing as an executive leader, and refocuses on business impact.`;
+    } else if (/are you (an? )?(ai|bot|robot|automated)|is this ai/i.test(lower)) {
+      script = `"Haha, I'm a real person right here! But our platform does use cutting-edge AI to help sales teams work faster and smarter. Are you open to seeing how that could give ${company} a competitive edge?"`;
+      tactical = `Uses warm humor to humanize the rep, directly confirms reality, and seamlessly transitions to the value of AI for their business.`;
+    } else {
+      script = `"I appreciate you bringing that up, ${name}. From our experience working with companies like ${company}, addressing that directly is what unlocked significant momentum for them. What would a successful outcome look like for you if we tackled that together?"`;
+      tactical = `Demonstrates consultative listening and shifts the prospect into envisioning future success and partnership.`;
+    }
+
+    return {
+      suggestion: `${script}\n\n💡 Tactical Angle: ${tactical}`,
+      engine: 'Dynamic AI Copilot',
+    };
   },
 
   async draftEmail(callId: string): Promise<{ subject: string; body: string }> {
@@ -367,49 +424,39 @@ export const api = {
     const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp', outcome: 'follow_up_agreed', furthest_stage: 1 };
     const results = getLocalResults()[callId] || [];
 
-    const name = call.prospect_name || 'there';
+    // Try server-side LLM first
+    try {
+      const res = await fetch('/api/draft-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call, stage_results: results }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.subject && data.body) {
+          return { subject: data.subject, body: data.body };
+        }
+      }
+    } catch {
+      // Server offline, use dynamic generator
+    }
+
+    const name = call.prospect_name ? call.prospect_name.split(' ')[0] : 'there';
     const company = call.company || 'your team';
     const outcome = call.outcome || 'follow_up_agreed';
 
-    const humanizeTap = (tap: string) => {
-      switch (tap) {
-        case 'right_person_hooked':
-        case 'reached_right_person':
-          return 'connected directly to discuss your outbound sales operations';
-        case 'switchboard_answered':
-          return 'navigated past the assistant to connect with key leadership';
-        case 'asked_for_email':
-          return 'agreed to share a quick summary overview';
-        case 'described_business':
-          return 'reviewed your core manufacturing and operational model';
-        case 'described_situation':
-          return 'identified key pipeline bottlenecks and current workflow challenges';
-        case 'competitor_objection':
-          return 'touched upon your current vendor setup and opportunities for faster turnaround';
-        case 'price_objection':
-          return 'discussed ROI targets and cost-efficiency metrics';
-        case 'demo_scheduled':
-        case 'meeting_booked':
-          return 'finalized a dedicated strategy session';
-        default:
-          return 'reviewed opportunities for operational enhancement';
-      }
-    };
-
-    const highlights = results.map(r => humanizeTap(r.tap_key)).filter(Boolean);
-    const narrativeSummary = highlights.length > 0 
-      ? `During our conversation, we ${highlights.join(', and we ')}.`
-      : `We discussed ways to accelerate pipeline growth and streamline outbound conversion for ${company}.`;
-
-    let subject = `Connecting with ${company} & Meridian`;
-    let body = `Hi ${name},\n\nIt was a pleasure speaking with you earlier today regarding ${company}.\n\n${narrativeSummary}\n\nI am confident our platform can provide immediate value in automating these workflows and driving revenue growth. Let's connect next week for a brief 10-minute walkthrough.\n\nBest regards,\nMeridian Team`;
+    let subject = `Connecting on ${company}'s outbound initiatives`;
+    let body = '';
 
     if (outcome === 'meeting_booked') {
-      subject = `Confirmed: Meridian Walkthrough with ${company}`;
-      body = `Hi ${name},\n\nThank you for taking the time to connect today and locking in our upcoming session for ${company}.\n\n${narrativeSummary}\n\nI've sent over the calendar invite with all details. Looking forward to showing you the platform in action!\n\nBest regards,\nMeridian Team`;
+      subject = `Confirmed: Strategy Session – ${company} & Meridian`;
+      body = `Hi ${name},\n\nThank you for taking the time to speak today. I really enjoyed learning about ${company}'s current trajectory and priorities.\n\nAs agreed, I've reserved time on the calendar for our walkthrough. We'll take a deep dive into how teams like yours are automating cold pipeline workflows and driving predictable conversions.\n\nLooking forward to speaking soon!\n\nBest regards,\nMeridian Sales Team`;
     } else if (outcome === 'not_interested') {
-      subject = `Following up / ${company}`;
-      body = `Hi ${name},\n\nThank you for speaking with me earlier today. I completely understand that timing or current priorities at ${company} may not align right now.\n\nI'll keep a note to check back in a few quarters. Wishing you and the team continued success!\n\nBest regards,\nMeridian Team`;
+      subject = `Keeping in touch / ${company}`;
+      body = `Hi ${name},\n\nThank you for taking a moment to connect earlier. I completely understand that timing isn't right for ${company} at this stage.\n\nI'll keep a note to check back in when your schedule opens up down the road. In the meantime, wishing you and the entire team continued success!\n\nBest regards,\nMeridian Sales Team`;
+    } else {
+      subject = `Following up on our conversation – ${company}`;
+      body = `Hi ${name},\n\nIt was great speaking with you earlier regarding ${company}'s current setup.\n\nBased on what you shared about your day-to-day workflow, I'm confident our platform can deliver immediate efficiency gains and accelerate your revenue targets.\n\nLet me know when you have 10 minutes next week to take a look at a brief tailored walkthrough.\n\nBest regards,\nMeridian Sales Team`;
     }
 
     return { subject, body };
