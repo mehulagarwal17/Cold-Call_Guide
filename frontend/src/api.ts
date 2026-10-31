@@ -345,18 +345,34 @@ export const api = {
   async askCopilot(callId: string, utterance: string, stageId: number): Promise<{ suggestion: string }> {
     const calls = getLocalCalls();
     const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp' };
-    const stageName = STAGE_NAME_MAP[stageId] || `Stage ${stageId}`;
+    const name = call.prospect_name || 'Prospect';
+    const comp = call.company || 'your company';
 
-    const lower = utterance.toLowerCase();
-    let suggestion = `Acknowledge "${utterance}". Pivot by asking: 'How are you currently handling that challenge at ${call.company}?'`;
-    if (any(lower, ['who', 'calling', 'where'])) {
-      suggestion = `State identity clearly: 'Hi ${call.prospect_name}, calling from Meridian. We help ${call.company} accelerate pipeline.'`;
-    } else if (any(lower, ['price', 'cost', 'expensive', 'budget'])) {
-      suggestion = `Isolate value: 'I completely understand. Compared to losing revenue on slow responses, what is your current ROI target?'`;
-    } else if (any(lower, ['competitor', 'already use', 'vendor'])) {
-      suggestion = `Differentiate: 'That's great you have a tool in place. What is the one bottleneck you wish it solved better?'`;
-    } else if (any(lower, ['email', 'whatsapp', 'send'])) {
-      suggestion = `Secure permission: 'Happy to drop that over. What email should I send the breakdown to?'`;
+    const lower = (utterance || '').toLowerCase().trim();
+    if (!lower) {
+      return { suggestion: "Listening... Speak into your mic or choose a quick prospect phrase below." };
+    }
+
+    let suggestion = `Acknowledge "${utterance}". Pivot by asking: 'How are you currently handling that challenge at ${comp}?'`;
+
+    if (any(lower, ['who', 'calling', 'where', 'what company', 'what is this'])) {
+      suggestion = `Identify & Hook: 'Hi ${name}, calling from Meridian. We partner with teams at ${comp} to eliminate sales friction. Do you have 30 seconds?'`;
+    } else if (any(lower, ['what do you do', 'what is meridian', 'what do you guys do', 'regarding what', 'purpose'])) {
+      suggestion = `Crisp Value Prop: 'We provide real-time AI guidance during live sales calls so reps handle every objection smoothly. Quick question: how does your team coach reps today?'`;
+    } else if (any(lower, ['email', 'whatsapp', 'send me', 'send details', 'drop me', 'send an email'])) {
+      suggestion = `Secure Permission: 'Gladly sending that over. To make sure I only send what matters to ${comp}, what is your primary focus this quarter?'`;
+    } else if (any(lower, ['price', 'cost', 'expensive', 'budget', 'charge', 'how much'])) {
+      suggestion = `Pivot to ROI: 'Completely fair question. Before talking numbers, most clients see 3x ROI within 30 days. What is your team's current benchmark?'`;
+    } else if (any(lower, ['competitor', 'already use', 'vendor', 'existing tool', 'have a solution'])) {
+      suggestion = `Differentiate: 'Great that you have a tool in place. Many clients also used them before switching for faster live guidance. What is one bottleneck you wish was faster?'`;
+    } else if (any(lower, ['busy', 'meeting', 'not now', 'call later', 'tied up', 'bad time'])) {
+      suggestion = `Respect Time & Lock Slot: 'I hear you, you're busy. Can I lock in a quick 5-minute slot this Thursday at 10 AM, or is afternoon better?'`;
+    } else if (any(lower, ['not interested', 'no thanks', 'dont need', 'not for us'])) {
+      suggestion = `Isolate Objection: 'Understood ${name}. Is it that this isn't a priority right now, or do you already have a solid system in place?'`;
+    } else if (any(lower, ['meeting', 'demo', 'schedule', 'thursday', 'calendar', 'time works', 'book'])) {
+      suggestion = `Close & Confirm: 'Fantastic! Confirming our strategy session for ${comp}. I will send the calendar invite to your inbox right now.'`;
+    } else if (any(lower, ['problem', 'delay', 'issue', 'slow', 'hard', 'struggle'])) {
+      suggestion = `Deepen Pain: 'That sounds like a major blocker. How much time or revenue is that currently costing your team each month?'`;
     }
 
     return { suggestion };
