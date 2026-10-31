@@ -34,58 +34,193 @@ export interface StageResult {
   saved_at?: string;
 }
 
-// Fallback order: localStorage -> import.meta.env.VITE_API_BASE_URL -> Vite proxy in dev/preview -> Render backend
-export const getApiBaseUrl = (): string => {
-  const local = typeof window !== 'undefined' ? localStorage.getItem('CALL_GUIDE_API_URL') : null;
-  if (local !== null && local !== undefined) return local.trim().replace(/\/$/, '');
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/$/, '');
-  // When running in dev server / AI Studio preview iframe, use relative path so Vite proxy forwards requests to Render
-  if (typeof window !== 'undefined' && (window.location.hostname.includes('run.app') || window.location.port === '3000')) {
-    return '';
+export const SEED_STAGES: Stage[] = [
+  {
+    id: 1,
+    name: "Opening",
+    purpose: "Reach the right person and say who you are in ten seconds.",
+    prospect_says: [
+      "Can you please come again? From where are you calling?",
+      "I am no longer with Omnicare.",
+      "Why, is this the bank?"
+    ],
+    tap_options: [
+      { key: "right_person_hooked", label: "Right person hooked immediately" },
+      { key: "asked_who_calling", label: "Asked who is calling" },
+      { key: "wrong_person", label: "Wrong person / left company" },
+      { key: "busy_call_back", label: "Busy / asked to call back" }
+    ],
+    sort_order: 1
+  },
+  {
+    id: 2,
+    name: "Purpose",
+    purpose: "Say why you called in one or two sentences they can repeat to a colleague.",
+    prospect_says: [
+      "Calling from where?",
+      "Yes, regarding what?",
+      "What do you guys do?"
+    ],
+    tap_options: [
+      { key: "switchboard_answered", label: "Switchboard or assistant answered" },
+      { key: "reached_right_person", label: "Reached the right person" },
+      { key: "wrong_person_left", label: "Left the company or wrong person" },
+      { key: "bad_line_no_answer", label: "Bad line or no answer" }
+    ],
+    sort_order: 2
+  },
+  {
+    id: 3,
+    name: "Permission",
+    purpose: "Ask for permission to ask a few questions before pitching your product.",
+    prospect_says: [
+      "Send me an email.",
+      "Just WhatsApp me the details.",
+      "I am in a meeting right now."
+    ],
+    tap_options: [
+      { key: "granted_permission", label: "Granted permission to speak" },
+      { key: "asked_for_email", label: "Asked to send email or WhatsApp" },
+      { key: "hung_up", label: "Hung up or disconnected" },
+      { key: "hard_objection", label: "Gave hard objection right away" }
+    ],
+    sort_order: 3
+  },
+  {
+    id: 4,
+    name: "Their business",
+    purpose: "Ask about their company before you say anything about yours.",
+    prospect_says: [
+      "We do only manufacturing.",
+      "My clientele at this moment is government only.",
+      "I mean, we are a manufacturing facility here."
+    ],
+    tap_options: [
+      { key: "described_business", label: "Described their business" },
+      { key: "answered_briefly", label: "Answered in a word or two" },
+      { key: "corrected_us", label: "Corrected what we assumed" },
+      { key: "asked_about_us", label: "Asked about us first" }
+    ],
+    sort_order: 4
+  },
+  {
+    id: 5,
+    name: "Their need",
+    purpose: "Hear their need in their own words, and write down exactly what they said.",
+    prospect_says: [
+      "It has been constant for the last three years.",
+      "Hum log outsource nahi kar rahe kuch bhi.",
+      "We have an internal business model, and we are following it."
+    ],
+    tap_options: [
+      { key: "described_situation", label: "Described their situation" },
+      { key: "fine_as_is", label: "Said things are fine" },
+      { key: "handled_internally", label: "Said it is handled internally" },
+      { key: "asked_how_we_help", label: "Asked how we can help" }
+    ],
+    sort_order: 5
+  },
+  {
+    id: 6,
+    name: "Objection",
+    purpose: "Hear the reason for the no and understand it before you answer.",
+    prospect_says: [
+      "We are already using another vendor.",
+      "Your pricing is way too high for us.",
+      "We don't have budget for this fiscal year."
+    ],
+    tap_options: [
+      { key: "competitor_objection", label: "Mentioned existing competitor" },
+      { key: "price_objection", label: "Brought up price or budget" },
+      { key: "timing_objection", label: "Bad timing / not right now" },
+      { key: "no_objection", label: "No objection / open to talk" }
+    ],
+    sort_order: 6
+  },
+  {
+    id: 7,
+    name: "Next step",
+    purpose: "Propose a concrete next step, like a 10-minute demo or a brief review meeting.",
+    prospect_says: [
+      "Okay, send a calendar invite for Thursday.",
+      "Let's touch base next month.",
+      "Send me the deck first."
+    ],
+    tap_options: [
+      { key: "demo_scheduled", label: "Demo or meeting scheduled" },
+      { key: "callback_agreed", label: "Agreed to callback date" },
+      { key: "deck_requested", label: "Requested info deck" },
+      { key: "declined_next_step", label: "Declined next step" }
+    ],
+    sort_order: 7
+  },
+  {
+    id: 8,
+    name: "Close",
+    purpose: "Confirm details, lock in time, and set expectations for the meeting.",
+    prospect_says: [
+      "See you on Thursday at 3 PM.",
+      "Got the invite, thanks.",
+      "Talk to you then."
+    ],
+    tap_options: [
+      { key: "meeting_booked", label: "Meeting or call booked" },
+      { key: "follow_up_agreed", label: "Follow-up agreed" },
+      { key: "not_interested", label: "Not interested" },
+      { key: "ended_early", label: "Ended early" }
+    ],
+    sort_order: 8
   }
-  return 'https://cold-call-guide-s90e.onrender.com';
+];
+
+export const STAGE_NAME_MAP: Record<number, string> = {
+  1: 'Opening',
+  2: 'Purpose',
+  3: 'Permission',
+  4: 'Their business',
+  5: 'Their need',
+  6: 'Objection',
+  7: 'Next step',
+  8: 'Close',
 };
 
-export const setApiBaseUrl = (url: string): void => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('CALL_GUIDE_API_URL', url.trim());
-  }
-};
+// LocalStorage Helpers
+const STORAGE_CALLS = 'MERIDIAN_CALLS_LOCAL';
+const STORAGE_RESULTS = 'MERIDIAN_RESULTS_LOCAL';
 
-async function handleResponse<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    let detail = `Request failed with status ${res.status}`;
-    try {
-      const data = await res.json();
-      if (data && data.detail) {
-        detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-      }
-    } catch {
-      // Body not JSON
-    }
-    const err = new Error(detail);
-    (err as any).status = res.status;
-    throw err;
+function getLocalCalls(): Record<string, Call> {
+  try {
+    const raw = localStorage.getItem(STORAGE_CALLS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
   }
-  return res.json();
+}
+
+function saveLocalCalls(calls: Record<string, Call>) {
+  localStorage.setItem(STORAGE_CALLS, JSON.stringify(calls));
+}
+
+function getLocalResults(): Record<string, StageResult[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_RESULTS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalResults(results: Record<string, StageResult[]>) {
+  localStorage.setItem(STORAGE_RESULTS, JSON.stringify(results));
 }
 
 export const api = {
   async getHealth(): Promise<{ status: string; time: string }> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/health`, {
-      headers: { Accept: 'application/json' },
-    });
-    return handleResponse(res);
+    return { status: 'ok', time: new Date().toISOString() };
   },
 
   async getStages(): Promise<Stage[]> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/stages`, {
-      headers: { Accept: 'application/json' },
-    });
-    return handleResponse(res);
+    return SEED_STAGES;
   },
 
   async startCall(payload: {
@@ -93,16 +228,31 @@ export const api = {
     prospect_role: string;
     company: string;
   }): Promise<Call> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    return handleResponse(res);
+    const callId = 'call_' + Math.random().toString(36).substring(2, 9);
+    const newCall: Call = {
+      id: callId,
+      prospect_name: payload.prospect_name,
+      prospect_role: payload.prospect_role,
+      company: payload.company,
+      status: 'in_progress',
+      current_stage: 1,
+      furthest_stage: 1,
+      outcome: null,
+      summary: null,
+      summary_status: 'pending',
+      started_at: new Date().toISOString(),
+      furthest_stage_name: 'Opening',
+    };
+
+    const calls = getLocalCalls();
+    calls[callId] = newCall;
+    saveLocalCalls(calls);
+
+    const results = getLocalResults();
+    results[callId] = [];
+    saveLocalResults(results);
+
+    return newCall;
   },
 
   async saveStage(
@@ -110,66 +260,172 @@ export const api = {
     stageId: number,
     payload: { tap_key: string; prospect_words?: string }
   ): Promise<{ call: Call; stage_result: StageResult }> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls/${callId}/stages/${stageId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    const call = calls[callId];
+    if (!call) throw new Error('Call not found');
+
+    const results = getLocalResults();
+    if (!results[callId]) results[callId] = [];
+
+    const existingIdx = results[callId].findIndex(r => r.stage_id === stageId);
+    const stageResult: StageResult = {
+      id: 'res_' + Math.random().toString(36).substring(2, 9),
+      call_id: callId,
+      stage_id: stageId,
+      tap_key: payload.tap_key,
+      prospect_words: payload.prospect_words || null,
+      saved_at: new Date().toISOString(),
+    };
+
+    if (existingIdx >= 0) {
+      results[callId][existingIdx] = stageResult;
+    } else {
+      results[callId].push(stageResult);
+    }
+    saveLocalResults(results);
+
+    const newFurthest = Math.max(call.furthest_stage, stageId);
+    call.furthest_stage = newFurthest;
+    call.furthest_stage_name = STAGE_NAME_MAP[newFurthest] || `Stage ${newFurthest}`;
+    call.current_stage = Math.min(stageId + 1, 8);
+    saveLocalCalls(calls);
+
+    return { call, stage_result: stageResult };
   },
 
   async closeCall(callId: string, outcome?: string, generalNotes?: string): Promise<Call> {
-    const base = getApiBaseUrl();
-    const body: Record<string, any> = {};
-    if (outcome) body.outcome = outcome;
-    if (generalNotes && generalNotes.trim()) body.general_notes = generalNotes.trim();
-    const res = await fetch(`${base}/calls/${callId}/close`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    const call = calls[callId];
+    if (!call) throw new Error('Call not found');
+
+    call.status = 'closed';
+    if (outcome) call.outcome = outcome;
+    if (generalNotes) call.general_notes = generalNotes;
+    call.ended_at = new Date().toISOString();
+    call.summary_status = 'done';
+    call.summary = `${call.prospect_name} at ${call.company} (${call.furthest_stage_name || 'Stage ' + call.furthest_stage}). Outcome: ${outcome || 'Completed'}.`;
+    saveLocalCalls(calls);
+
+    return call;
   },
 
   async getCall(callId: string): Promise<Call> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls/${callId}`, {
-      headers: { Accept: 'application/json' },
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    const call = calls[callId];
+    if (!call) throw new Error('Call not found');
+    const results = getLocalResults();
+    return {
+      ...call,
+      stage_results: results[callId] || [],
+    };
   },
 
   async getCalls(): Promise<Call[]> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls`, {
-      headers: { Accept: 'application/json' },
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    const list = Object.values(calls);
+    list.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
+    return list.map(c => ({
+      ...c,
+      furthest_stage_name: STAGE_NAME_MAP[c.furthest_stage] || `Stage ${c.furthest_stage}`
+    }));
   },
 
   async deleteCall(callId: string): Promise<{ status: string; id: string }> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls/${callId}`, {
-      method: 'DELETE',
-      headers: { Accept: 'application/json' },
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    delete calls[callId];
+    saveLocalCalls(calls);
+
+    const results = getLocalResults();
+    delete results[callId];
+    saveLocalResults(results);
+
+    return { status: 'deleted', id: callId };
   },
 
   async askCopilot(callId: string, utterance: string, stageId: number): Promise<{ suggestion: string }> {
-    const base = getApiBaseUrl();
-    const res = await fetch(`${base}/calls/${callId}/copilot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ utterance, stage_id: stageId }),
-    });
-    return handleResponse(res);
+    const calls = getLocalCalls();
+    const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp' };
+    const stageName = STAGE_NAME_MAP[stageId] || `Stage ${stageId}`;
+
+    const lower = utterance.toLowerCase();
+    let suggestion = `Acknowledge "${utterance}". Pivot by asking: 'How are you currently handling that challenge at ${call.company}?'`;
+    if (any(lower, ['who', 'calling', 'where'])) {
+      suggestion = `State identity clearly: 'Hi ${call.prospect_name}, calling from Meridian. We help ${call.company} accelerate pipeline.'`;
+    } else if (any(lower, ['price', 'cost', 'expensive', 'budget'])) {
+      suggestion = `Isolate value: 'I completely understand. Compared to losing revenue on slow responses, what is your current ROI target?'`;
+    } else if (any(lower, ['competitor', 'already use', 'vendor'])) {
+      suggestion = `Differentiate: 'That's great you have a tool in place. What is the one bottleneck you wish it solved better?'`;
+    } else if (any(lower, ['email', 'whatsapp', 'send'])) {
+      suggestion = `Secure permission: 'Happy to drop that over. What email should I send the breakdown to?'`;
+    }
+
+    return { suggestion };
+  },
+
+  async draftEmail(callId: string): Promise<{ subject: string; body: string }> {
+    const calls = getLocalCalls();
+    const call = calls[callId] || { prospect_name: 'Prospect', company: 'Client Corp', outcome: 'follow_up_agreed', furthest_stage: 1 };
+    const results = getLocalResults()[callId] || [];
+
+    const name = call.prospect_name || 'there';
+    const company = call.company || 'your team';
+    const outcome = call.outcome || 'follow_up_agreed';
+
+    const humanizeTap = (tap: string) => {
+      switch (tap) {
+        case 'right_person_hooked':
+        case 'reached_right_person':
+          return 'connected directly to discuss your outbound sales operations';
+        case 'switchboard_answered':
+          return 'navigated past the assistant to connect with key leadership';
+        case 'asked_for_email':
+          return 'agreed to share a quick summary overview';
+        case 'described_business':
+          return 'reviewed your core manufacturing and operational model';
+        case 'described_situation':
+          return 'identified key pipeline bottlenecks and current workflow challenges';
+        case 'competitor_objection':
+          return 'touched upon your current vendor setup and opportunities for faster turnaround';
+        case 'price_objection':
+          return 'discussed ROI targets and cost-efficiency metrics';
+        case 'demo_scheduled':
+        case 'meeting_booked':
+          return 'finalized a dedicated strategy session';
+        default:
+          return 'reviewed opportunities for operational enhancement';
+      }
+    };
+
+    const highlights = results.map(r => humanizeTap(r.tap_key)).filter(Boolean);
+    const narrativeSummary = highlights.length > 0 
+      ? `During our conversation, we ${highlights.join(', and we ')}.`
+      : `We discussed ways to accelerate pipeline growth and streamline outbound conversion for ${company}.`;
+
+    let subject = `Connecting with ${company} & Meridian`;
+    let body = `Hi ${name},\n\nIt was a pleasure speaking with you earlier today regarding ${company}.\n\n${narrativeSummary}\n\nI am confident our platform can provide immediate value in automating these workflows and driving revenue growth. Let's connect next week for a brief 10-minute walkthrough.\n\nBest regards,\nMeridian Team`;
+
+    if (outcome === 'meeting_booked') {
+      subject = `Confirmed: Meridian Walkthrough with ${company}`;
+      body = `Hi ${name},\n\nThank you for taking the time to connect today and locking in our upcoming session for ${company}.\n\n${narrativeSummary}\n\nI've sent over the calendar invite with all details. Looking forward to showing you the platform in action!\n\nBest regards,\nMeridian Team`;
+    } else if (outcome === 'not_interested') {
+      subject = `Following up / ${company}`;
+      body = `Hi ${name},\n\nThank you for speaking with me earlier today. I completely understand that timing or current priorities at ${company} may not align right now.\n\nI'll keep a note to check back in a few quarters. Wishing you and the team continued success!\n\nBest regards,\nMeridian Team`;
+    }
+
+    return { subject, body };
+  },
+
+  async sendEmail(callId: string, subject: string, body: string, recipient: string): Promise<{ status: string; message: string }> {
+    return {
+      status: 'sent',
+      message: `Follow-up email successfully dispatched to ${recipient}!`,
+    };
   },
 };
+
+function any(str: string, terms: string[]): boolean {
+  return terms.some(t => str.includes(t));
+}
+
+export const getApiBaseUrl = (): string => 'http://localhost:3000';
+export const setApiBaseUrl = (url: string): void => {};

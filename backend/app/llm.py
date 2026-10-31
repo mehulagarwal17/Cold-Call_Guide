@@ -280,3 +280,71 @@ def generate_copilot_response(
         pass
 
     return fallback_resp
+
+
+EMAIL_SYSTEM_PROMPT = (
+    "You are an elite B2B sales copywriter and executive assistant.\n"
+    "Draft a concise, high-converting, personalized cold-call follow-up email based on the call details, stage results, and summary.\n"
+    "Return the result in JSON format with two keys: 'subject' and 'body'."
+)
+
+
+def generate_follow_up_email(
+    call: Dict[str, Any],
+    stage_results: List[Dict[str, Any]],
+) -> Dict[str, str]:
+    prospect_name = call.get('prospect_name', 'there')
+    company = call.get('company', 'your company')
+    summary = call.get('summary', 'Great speaking with you today.')
+    outcome = call.get('outcome', 'follow_up_agreed')
+
+    fallback = {
+        "subject": f"Great connecting today – {company}",
+        "body": f"Hi {prospect_name},\n\nIt was great speaking with you earlier regarding {company}. Based on our conversation, I'm confident our platform can address your current workflow bottlenecks.\n\nLet's connect soon for a quick walkthrough.\n\nBest regards,\nMeridian Team"
+    }
+
+    if not LLM_API_KEY:
+        return fallback
+
+    provider = (LLM_PROVIDER or "gemini").lower().strip()
+    model = (LLM_MODEL or DEFAULT_MODELS.get(provider, "gemini-2.5-flash")).strip()
+    if model.startswith("models/"):
+        model = model[7:]
+    if provider == "gemini" and (not model or model in ("gemini-1.5-flash", "gemini-1.5-pro", "gemini")):
+        model = "gemini-2.5-flash"
+
+    details_str = f"Prospect: {prospect_name} ({call.get('prospect_role')}) at {company}\nOutcome: {outcome}\nSummary: {summary}\nStage Notes: {stage_results}"
+
+    try:
+        if provider == "gemini":
+            gemini_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            payload = {
+                "system_instruction": {"parts": [{"text": EMAIL_SYSTEM_PROMPT}]},
+                "contents": [{"parts": [{"text": f"Draft the follow-up email in JSON format with 'subject' and 'body' keys based on:\n{details_str}"}]}],
+                "generationConfig": {
+                    "maxOutputTokens": 300,
+                    "temperature": 0.3,
+                    "responseMimeType": "application/json",
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
+            }
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(
+                    gemini_endpoint,
+                    params={"key": LLM_API_KEY},
+                    json=payload,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            import json
+                            parsed = json.loads(parts[0].get("text", "{}"))
+                            if "subject" in parsed and "body" in parsed:
+                                return {"subject": parsed["subject"], "body": parsed["body"]}
+    except Exception:
+        pass
+
+    return fallback

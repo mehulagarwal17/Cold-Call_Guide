@@ -1,20 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Manrope:wght@500;600;700&display=swap');
+
 /* Cold-Call Guide Screen CSS */
 :root {
-  --bg-color: #f5ebdd;
+  --bg-color: #fef3e2;
   --card-bg: #ffffff;
-  --text-main: #413333;
-  --text-muted: #6b5b5b;
-  --border-color: #e6d7c3;
-  --primary: #f76e53;
-  --primary-hover: #e05b40;
-  --primary-light: #fef2f0;
-  --secondary: #315b8c;
-  --secondary-hover: #24466d;
+  --text-main: #2a1a0e;
+  --text-muted: #785e49;
+  --border-color: #e8d5bc;
+  --primary: #2a1a0e;
+  --primary-hover: #170e07;
+  --primary-light: #f5ebe0;
+  --accent: #d4621a;
+  --secondary: #f4ae52;
+  --secondary-hover: #e09b40;
   --danger: #dc2626;
   --danger-hover: #b91c1c;
   --success: #16a34a;
-  --surface-alt: #fcf9f4;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --surface-alt: #fcf7f0;
+  --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 * {
@@ -102,7 +106,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  background: var(--secondary);
+  background: var(--primary);
   color: #ffffff;
 }
 
@@ -119,13 +123,14 @@ body {
 }
 
 .call-timer {
-  font-family: monospace;
-  font-size: 14px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.12);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.15);
   padding: 2px 6px;
   border-radius: 4px;
   color: #38bdf8;
+  letter-spacing: 0.05em;
 }
 
 /* Top Nav Links */
@@ -256,16 +261,17 @@ body {
 }
 
 .stage-badge {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   color: var(--primary);
 }
 
 .stage-title {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-main);
   line-height: 1.15;
   margin: 1px 0 2px;
@@ -283,10 +289,11 @@ body {
 }
 
 .section-label {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: 4px;
 }

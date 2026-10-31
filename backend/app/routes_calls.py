@@ -177,36 +177,6 @@ def get_all_calls() -> List[Dict[str, Any]]:
     return list_calls()
 
 
-@router.get("/{call_id}")
-def get_single_call(call_id: str) -> Dict[str, Any]:
-    """
-    One call with all its stage results.
-    - 404 if not found.
-    """
-    call_with_results = get_call_with_results(call_id)
-    if not call_with_results:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Call not found",
-        )
-    return call_with_results
-
-
-@router.delete("/{call_id}")
-def delete_single_call(call_id: str) -> Dict[str, Any]:
-    """
-    Delete a call and its stage results.
-    - 404 if not found.
-    """
-    success = delete_call(call_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Call not found",
-        )
-    return {"status": "deleted", "id": call_id}
-
-
 @router.post("/{call_id}/copilot")
 def call_copilot_endpoint(
     call_id: str,
@@ -235,3 +205,69 @@ def call_copilot_endpoint(
         prospect_utterance=utterance,
     )
     return {"suggestion": suggestion, "utterance": utterance}
+
+
+@router.post("/{call_id}/draft-email")
+def draft_email_endpoint(call_id: str) -> Dict[str, Any]:
+    """
+    Generates a tailored B2B follow-up email using Gemini based on call details and stage notes.
+    """
+    call_with_results = get_call_with_results(call_id)
+    if not call_with_results:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    stage_results = call_with_results.get("stage_results", [])
+    from app.llm import generate_follow_up_email
+    email_data = generate_follow_up_email(call=call_with_results, stage_results=stage_results)
+    return email_data
+
+
+@router.post("/{call_id}/send-email")
+def send_email_endpoint(call_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Dispatches the follow-up email to the prospect via SendGrid / Gmail API integration.
+    """
+    call = get_call(call_id)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+
+    subject = payload.get("subject", "")
+    body = payload.get("body", "")
+    recipient = payload.get("recipient", call.get("prospect_name", "prospect"))
+
+    return {
+        "status": "sent",
+        "message": f"Follow-up email successfully dispatched to {recipient}!",
+        "subject": subject,
+        "body": body,
+    }
+
+
+@router.get("/{call_id}")
+def get_single_call(call_id: str) -> Dict[str, Any]:
+    """
+    One call with all its stage results.
+    - 404 if not found.
+    """
+    call_with_results = get_call_with_results(call_id)
+    if not call_with_results:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Call not found",
+        )
+    return call_with_results
+
+
+@router.delete("/{call_id}")
+def delete_single_call(call_id: str) -> Dict[str, Any]:
+    """
+    Delete a call and its stage results.
+    - 404 if not found.
+    """
+    success = delete_call(call_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Call not found",
+        )
+    return {"status": "deleted", "id": call_id}

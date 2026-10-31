@@ -38,6 +38,32 @@ export const PastCalls: React.FC<PastCallsProps> = ({
     }
   };
 
+  const handleDownloadCsv = () => {
+    if (calls.length === 0) return;
+    const headers = ['Call ID', 'Prospect Name', 'Role', 'Company', 'Status', 'Furthest Stage', 'Outcome', 'Summary', 'Started At'];
+    const rows = calls.map((c) => [
+      c.id,
+      `"${(c.prospect_name || '').replace(/"/g, '""')}"`,
+      `"${(c.prospect_role || '').replace(/"/g, '""')}"`,
+      `"${(c.company || '').replace(/"/g, '""')}"`,
+      c.status,
+      `"${c.furthest_stage_name || c.furthest_stage}"`,
+      c.outcome || '',
+      `"${(c.summary || '').replace(/"/g, '""')}"`,
+      c.started_at || '',
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `meridian_past_calls_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDeleteCall = async () => {
     if (!callPendingDelete) return;
     try {
@@ -385,20 +411,40 @@ export const PastCalls: React.FC<PastCallsProps> = ({
         <div className="header-left">
           <span className="brand-title">Past Calls</span>
         </div>
-        <button
-          type="button"
-          onClick={loadCalls}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#38bdf8',
-            fontSize: '12px',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          ↻ Refresh
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={handleDownloadCsv}
+            disabled={calls.length === 0}
+            style={{
+              background: '#ffffff',
+              border: 'none',
+              color: '#2a1a0e',
+              fontSize: '11px',
+              cursor: calls.length === 0 ? 'not-allowed' : 'pointer',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: '4px',
+              opacity: calls.length === 0 ? 0.6 : 1,
+            }}
+          >
+            📥 Download Sheet
+          </button>
+          <button
+            type="button"
+            onClick={loadCalls}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#38bdf8',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: '12px 16px' }}>

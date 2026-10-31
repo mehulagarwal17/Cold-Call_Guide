@@ -24,7 +24,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
   const [savedStagesMap, setSavedStagesMap] = useState<Record<number, StageResult>>({});
   const [selectedTap, setSelectedTap] = useState<string>('');
   const [prospectWords, setProspectWords] = useState<string>('');
-  const [generalNotes, setGeneralNotes] = useState<string>('');
 
   // Timer state
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -34,6 +33,40 @@ export const LiveCall: React.FC<LiveCallProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [closedCallSummary, setClosedCallSummary] = useState<Call | null>(null);
   const [cardError, setCardError] = useState<{ message: string; retry: () => void } | null>(null);
+
+  // Email outreach state & handlers
+  const [emailDrafting, setEmailDrafting] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSentSuccess, setEmailSentSuccess] = useState(false);
+
+  const handleDraftEmail = async () => {
+    if (!closedCallSummary) return;
+    try {
+      setEmailDrafting(true);
+      const res = await api.draftEmail(closedCallSummary.id);
+      setEmailSubject(res.subject);
+      setEmailBody(res.body);
+    } catch (err: any) {
+      onError(err.message || 'Failed to draft email.');
+    } finally {
+      setEmailDrafting(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!closedCallSummary) return;
+    try {
+      setEmailSending(true);
+      await api.sendEmail(closedCallSummary.id, emailSubject, emailBody, closedCallSummary.prospect_name);
+      setEmailSentSuccess(true);
+    } catch (err: any) {
+      onError(err.message || 'Failed to send email.');
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   // Live Speech Recognition (Balto-style AI Copilot) state
   const [isListening, setIsListening] = useState(false);
@@ -174,7 +207,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       setSavedStagesMap({});
       setSelectedTap('');
       setProspectWords('');
-      setGeneralNotes('');
       setClosedCallSummary(null);
     } catch (err: any) {
       setCardError({
@@ -209,8 +241,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       setCurrentCall(saveRes.call);
 
       if (activeStageId === 8) {
-        // Stage 8 Finish Call -> close with outcome = selected tap and persistent general notes
-        const closed = await api.closeCall(currentCall.id, selectedTap, generalNotes);
+        // Stage 8 Finish Call -> close with outcome = selected tap
+        const closed = await api.closeCall(currentCall.id, selectedTap);
         setCurrentCall(null);
         setClosedCallSummary(closed);
       } else {
@@ -250,8 +282,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         }
       }
 
-      // Close call immediately with ended_early and persistent general notes
-      const closed = await api.closeCall(currentCall.id, undefined, generalNotes);
+      // Close call immediately with ended_early
+      const closed = await api.closeCall(currentCall.id);
       setCurrentCall(null);
       setClosedCallSummary(closed);
     } catch (err: any) {
@@ -274,7 +306,11 @@ export const LiveCall: React.FC<LiveCallProps> = ({
     setSavedStagesMap({});
     setSelectedTap('');
     setProspectWords('');
-    setGeneralNotes('');
+    setEmailDrafting(false);
+    setEmailSubject('');
+    setEmailBody('');
+    setEmailSending(false);
+    setEmailSentSuccess(false);
     onError(null);
   };
 
@@ -341,6 +377,85 @@ export const LiveCall: React.FC<LiveCallProps> = ({
                   ? 'Call logged successfully'
                   : 'Generating summary...')}
             </div>
+          </div>
+
+          {/* Automated Post-Call Outreach: AI Follow-Up Email Generator */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginTop: '10px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>✉️</span> AI Follow-Up Email (Gmail / SendGrid API)
+            </div>
+            {!emailSubject && !emailDrafting && !emailSentSuccess && (
+              <button
+                type="button"
+                onClick={handleDraftEmail}
+                style={{
+                  background: 'var(--primary)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+              >
+                ✨ Draft Tailored Follow-Up Email with Gemini
+              </button>
+            )}
+
+            {emailDrafting && (
+              <div style={{ textAlign: 'center', padding: '12px 0', fontSize: '12px', color: '#64748b' }}>
+                <span className="spinner spinner-dark" style={{ width: '12px', height: '12px' }}></span> Drafting personalized email...
+              </div>
+            )}
+
+            {emailSubject && !emailSentSuccess && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  style={{ padding: '6px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 600 }}
+                  placeholder="Email Subject"
+                />
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  rows={4}
+                  style={{ padding: '6px 8px', fontSize: '11.5px', border: '1px solid #cbd5e1', borderRadius: '4px', fontFamily: 'inherit', resize: 'vertical' }}
+                  placeholder="Email Body"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendEmail}
+                  disabled={emailSending}
+                  style={{
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: emailSending ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {emailSending && <span className="spinner" style={{ width: '12px', height: '12px' }}></span>}
+                  {emailSending ? 'Sending...' : '📤 Send Follow-Up Email'}
+                </button>
+              </div>
+            )}
+
+            {emailSentSuccess && (
+              <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', color: '#166534', padding: '8px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, textAlign: 'center' }}>
+                ✓ Follow-up email successfully dispatched to {closedCallSummary.prospect_name}!
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
@@ -645,28 +760,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
           value={prospectWords}
           onChange={(e) => setProspectWords(e.target.value.slice(0, 1000))}
           maxLength={1000}
-        />
-      </div>
-
-      {/* Persistent General Call Notes Section (persists across stages until call ends) */}
-      <div className="words-box-container" style={{ marginTop: '8px' }}>
-        <div className="words-header">
-          <label htmlFor="general-notes" className="section-label" style={{ marginBottom: 0 }}>
-            General Call Notes <span style={{ fontWeight: 400, color: '#64748b', fontSize: '11px' }}>(persists across all stages)</span>
-          </label>
-          <span className={`char-counter ${generalNotes.length > 1900 ? 'limit' : ''}`}>
-            {generalNotes.length} / 2000
-          </span>
-        </div>
-        <textarea
-          id="general-notes"
-          className="words-textarea"
-          rows={2}
-          style={{ minHeight: '50px', fontSize: '12.5px' }}
-          placeholder="Overall notes about this prospect, background context, or key takeaways (persists until call finishes)..."
-          value={generalNotes}
-          onChange={(e) => setGeneralNotes(e.target.value.slice(0, 2000))}
-          maxLength={2000}
         />
       </div>
 

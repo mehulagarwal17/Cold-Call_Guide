@@ -80,21 +80,28 @@ export default function App() {
     <div className="app-viewport">
       {/* Top Nav Switcher */}
       <nav className="nav-bar">
-        <div style={{ display: 'flex', gap: '14px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <a
             href="/"
-            className="nav-link-btn"
             style={{
-              fontWeight: currentTab === 'live' ? '800' : '500',
-              textDecoration: currentTab === 'live' ? 'underline' : 'none',
-              color: currentTab === 'live' ? '#2563eb' : '#64748b',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#111827',
+              color: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              textDecoration: 'none',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
             onClick={(e) => {
               e.preventDefault();
               navigateTo('live');
             }}
           >
-            Live Call
+            <span>📞</span> Live Call
           </a>
           <a
             href="/calls"
@@ -112,14 +119,6 @@ export default function App() {
             Past Calls
           </a>
         </div>
-        <button
-          type="button"
-          className="nav-link-btn"
-          style={{ fontSize: '11px', textDecoration: 'none', color: '#64748b' }}
-          onClick={() => setShowConfig(!showConfig)}
-        >
-          ⚙ API: {apiEndpoint ? apiEndpoint.replace(/^https?:\/\//, '').slice(0, 16) + '...' : 'default proxy'}
-        </button>
       </nav>
 
       {/* Discreet API Base URL Config (if toggled) */}
