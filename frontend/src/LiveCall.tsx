@@ -71,29 +71,16 @@ export const LiveCall: React.FC<LiveCallProps> = ({
   // Live Speech Recognition (Balto-style AI Copilot) state
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
-  const [aiLivePrompt, setAiLivePrompt] = useState<string>('Click "Start Live AI Copilot" or choose any phrase below for real-time coaching...');
-  const [copilotInput, setCopilotInput] = useState<string>('');
+  const [aiLivePrompt, setAiLivePrompt] = useState<string>('Click "Start Live AI Copilot" to listen in real-time...');
   const recognitionRef = useRef<any>(null);
-  const shouldListenRef = useRef<boolean>(false);
-  const retryCountRef = useRef<number>(0);
-  const reconnectTimeoutRef = useRef<any>(null);
 
-  const startRecognitionSession = () => {
+  const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setAiLivePrompt('Speech recognition is not supported in this browser. You can type or click quick phrases below.');
-      shouldListenRef.current = false;
-      setIsListening(false);
+      setAiLivePrompt('Speech recognition is not supported in this browser. Try Chrome or Edge.');
       return;
     }
-
     try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {}
-      }
-
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -101,7 +88,7 @@ export const LiveCall: React.FC<LiveCallProps> = ({
 
       recognition.onstart = () => {
         setIsListening(true);
-        retryCountRef.current = 0;
+        setAiLivePrompt('🎙 Listening... AI Copilot is active and analyzing conversation in real-time.');
       };
 
       recognition.onresult = async (event: any) => {
@@ -109,104 +96,41 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           transcriptChunk += event.results[i][0].transcript;
         }
-        if (transcriptChunk.trim()) {
-          setLiveTranscript(transcriptChunk);
-        }
+        setLiveTranscript(transcriptChunk);
         if (transcriptChunk.trim().length > 3) {
           await handleSimulatePhrase(transcriptChunk);
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error event:', event.error);
-
-        // Ignore normal pauses in conversation
-        if (event.error === 'no-speech' || event.error === 'aborted') {
-          return;
-        }
-
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          shouldListenRef.current = false;
-          setIsListening(false);
-          setAiLivePrompt('⚠️ Microphone access blocked. Check browser permissions in your URL bar or use quick triggers below.');
-          return;
-        }
-
-        if (event.error === 'network') {
-          // Chrome speech service dropped connection or timed out
-          if (shouldListenRef.current && retryCountRef.current < 2) {
-            retryCountRef.current += 1;
-            clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = setTimeout(() => {
-              if (shouldListenRef.current) {
-                startRecognitionSession();
-              }
-            }, 800);
-            return;
-          } else {
-            shouldListenRef.current = false;
-            setIsListening(false);
-            setAiLivePrompt('🎙 Speech service reached a network timeout. Tap 🎙 to retry, or click/type any response below for instant coaching.');
-            return;
-          }
-        }
-
-        // Other non-fatal errors: attempt a single soft reconnect if user still wants to listen
-        if (shouldListenRef.current && retryCountRef.current < 2) {
-          retryCountRef.current += 1;
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (shouldListenRef.current) startRecognitionSession();
-          }, 800);
+        console.warn('Speech recognition error', event.error);
+        if (event.error === 'not-allowed') {
+          setAiLivePrompt('⚠️ Microphone access denied or blocked in iframe. Please check browser permissions or open in a new tab.');
         } else {
-          shouldListenRef.current = false;
-          setIsListening(false);
-          setAiLivePrompt('🎙 Mic stream paused. Tap 🎙 to restart or select a quick prospect reply below.');
+          setAiLivePrompt(`⚠️ Speech recognition error: ${event.error}`);
         }
+        setIsListening(false);
       };
 
       recognition.onend = () => {
-        if (shouldListenRef.current) {
-          // Keep listening continuously by restarting
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (shouldListenRef.current) {
-              startRecognitionSession();
-            }
-          }, 300);
-        } else {
-          setIsListening(false);
-        }
+        setIsListening(false);
       };
 
       recognition.start();
       recognitionRef.current = recognition;
     } catch (e: any) {
       console.error(e);
-      shouldListenRef.current = false;
-      setIsListening(false);
-      setAiLivePrompt('Could not start microphone. Check browser permissions or type below.');
+      setAiLivePrompt('Could not start microphone. Check browser permissions.');
     }
-  };
-
-  const startListening = () => {
-    shouldListenRef.current = true;
-    retryCountRef.current = 0;
-    setAiLivePrompt('🎙 Listening... Speak naturally or wait for prospect response.');
-    startRecognitionSession();
   };
 
   const stopListening = () => {
-    shouldListenRef.current = false;
-    clearTimeout(reconnectTimeoutRef.current);
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
+      recognitionRef.current.stop();
       recognitionRef.current = null;
     }
     setIsListening(false);
-    setAiLivePrompt('Live AI Copilot paused. Tap 🎙 or choose a quick reply below.');
+    setAiLivePrompt('Live AI Copilot paused.');
   };
 
   const handleSimulatePhrase = async (phrase: string) => {
@@ -217,19 +141,11 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         const res = await api.askCopilot(currentCall.id, phrase, activeStageId);
         setAiLivePrompt(res.suggestion);
       } else {
-        const res = await api.askCopilot('mock', phrase, activeStageId);
-        setAiLivePrompt(res.suggestion);
+        setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and address their business needs.`);
       }
     } catch {
-      setAiLivePrompt(`⚡ Copilot: Acknowledge "${phrase}" and address their business needs.`);
+      setAiLivePrompt(`⚡ Gemini AI: Acknowledge "${phrase}" and ask an open-ended question.`);
     }
-  };
-
-  const handleManualAsk = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!copilotInput.trim()) return;
-    handleSimulatePhrase(copilotInput.trim());
-    setCopilotInput('');
   };
 
 
@@ -251,19 +167,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [currentCall]);
-
-  // Clean up speech recognition on component unmount
-  useEffect(() => {
-    return () => {
-      shouldListenRef.current = false;
-      clearTimeout(reconnectTimeoutRef.current);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {}
-      }
-    };
-  }, []);
 
   // Sync inputs when active stage changes
   useEffect(() => {
@@ -754,15 +657,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
             gap: '3px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-              ⚡ AI Real-Time Suggestion
-            </span>
-            {isListening && (
-              <span style={{ fontSize: '9px', color: '#16a34a', fontWeight: 700 }}>
-                ● Mic active
-              </span>
-            )}
+          <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            ⚡ AI Real-Time Suggestion
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: 600, lineHeight: 1.35 }}>
             {aiLivePrompt}
@@ -773,85 +669,6 @@ export const LiveCall: React.FC<LiveCallProps> = ({
             </div>
           )}
         </div>
-
-        {/* Quick Objection / Prompt Chips */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
-          {[
-            'Who is calling?',
-            'Send me an email',
-            'Already have a vendor',
-            'Too expensive',
-            'In a meeting / busy',
-            'Book demo for Thursday',
-          ].map((chip) => (
-            <button
-              key={chip}
-              type="button"
-              onClick={() => handleSimulatePhrase(chip)}
-              style={{
-                background: '#ffffff',
-                border: '1px solid var(--border-color)',
-                borderRadius: '12px',
-                padding: '2px 7px',
-                fontSize: '10px',
-                color: 'var(--text-main)',
-                cursor: 'pointer',
-                fontWeight: 600,
-                transition: 'all 0.1s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.color = 'var(--accent)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border-color)';
-                e.currentTarget.style.color = 'var(--text-main)';
-              }}
-            >
-              ⚡ {chip}
-            </button>
-          ))}
-        </div>
-
-        {/* Quick manual query bar for the Copilot */}
-        <form
-          onSubmit={handleManualAsk}
-          style={{ display: 'flex', gap: '4px', marginTop: '2px' }}
-        >
-          <input
-            type="text"
-            value={copilotInput}
-            onChange={(e) => setCopilotInput(e.target.value)}
-            placeholder="Or type prospect reply (e.g. 'not interested')..."
-            style={{
-              flex: 1,
-              padding: '4px 8px',
-              fontSize: '11px',
-              border: '1px solid var(--border-color)',
-              borderRadius: '4px',
-              background: '#ffffff',
-              color: 'var(--text-main)',
-              outline: 'none',
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!copilotInput.trim()}
-            style={{
-              background: 'var(--primary)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 10px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: copilotInput.trim() ? 'pointer' : 'default',
-              opacity: copilotInput.trim() ? 1 : 0.6,
-            }}
-          >
-            Coach me
-          </button>
-        </form>
       </div>
 
       {/* 3. Progress: eight numbered squares */}
@@ -892,17 +709,8 @@ export const LiveCall: React.FC<LiveCallProps> = ({
         <div className="section-label">They may say</div>
         <div className="quotes-list">
           {quotes.slice(0, 3).map((q, idx) => (
-            <div
-              key={idx}
-              className="quote-bubble"
-              onClick={() => handleSimulatePhrase(q)}
-              title="Click to get AI Copilot coaching for this quote"
-              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <span>“{q}”</span>
-              <span style={{ fontSize: '10px', color: 'var(--accent)', fontWeight: 700, marginLeft: '6px', whiteSpace: 'nowrap' }}>
-                ⚡ Coach
-              </span>
+            <div key={idx} className="quote-bubble">
+              “{q}”
             </div>
           ))}
         </div>
